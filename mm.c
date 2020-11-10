@@ -185,9 +185,8 @@ void *mm_malloc(size_t size)
 	return bp;
 }
 
-static void *find_fit(size_t asize){
+static void *find_fit(size_t asize){ //this is first fit 
     void *bp;
-
     for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
