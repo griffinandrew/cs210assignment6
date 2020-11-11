@@ -45,7 +45,14 @@ team_t team = {
 /* Basic constants and macros */ 
 #define	WSIZE	4 /* Word and header/footer size (bytes) */ 
 #define DSIZE	8 /* Double word size (bytes) */ 
-#define CHUNKSIZE (1<<12) /* Extend heap by this amount (bytes) */
+#define CHUNKSIZE (1<<24) /* Extend heap by this amount (bytes) */
+//i think i need to chane chunk size then to 24 was 12 
+
+//need 2 extra words for each block bc of next and prev
+#define PSPACE 8 
+
+//min size now is different with double alignment has to be 24
+#define MIN_SIZE 16 //was 24 
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 
@@ -61,23 +68,26 @@ team_t team = {
 #define GET_ALLOC(p)	(GET (p) & 0x1)
 
 /* Given block ptr bp, compute address of its header and footer */ 
-#define HDRP(bp)	((char *) (bp) - WSIZE) 
-#define FTRP(bp)	((char *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
+#define HDRP(bp)	((void *) (bp) - WSIZE) 
+#define FTRP(bp)	((void *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
 
 /* Given block ptr bp, compute address of next and previous blocks */ 
-#define NEXT_BLKP(bp)	((char *) (bp) + GET_SIZE(((char *) (bp) - WSIZE))) 
-#define PREV_BLKP(bp)	((char *) (bp) - GET_SIZE(((char *) (bp) - DSIZE)))
+#define NEXT_BLKP(bp)	((void *) (bp) + GET_SIZE(((void *) (bp) - WSIZE))) 
+#define PREV_BLKP(bp)	((void *) (bp) - GET_SIZE(((void *) (bp) - DSIZE)))
 
 //for explicit list need more macros
 //at least one for prev and next 
 
-#define PREV_FREE(bp)  (*(char**)bp) //now need to intialize these feilds for explicit free list
-#define NEXT_FEEE(bp) (*(char**)(bp+DSIZE))
+#define PREV_FREE(bp)  (*(void**)bp) //now need to intialize these feilds for explicit free list
+#define NEXT_FEEE(bp) (*(void**)(bp+DSIZE))
+//might need to change pointer type
 
 
+void *heap_listp = 0;
+void *free_listp = 0; //pointer to what will be first block
 
-void *heap_listp =0;
-void *free_listp =0; /pointer to what will be first block
+//i feel like i should add prev alloc to header value do i have to change pack? or need new func. 
+
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -238,3 +248,8 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 }
+
+
+
+//helper functiin for travseing free list and policy for free or unfreed
+//
