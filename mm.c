@@ -50,7 +50,7 @@ team_t team = {
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 
 /* Pack a size and allocated bit into a word */ 
-#define PACK(size, alloc) ((size) | (alloc))
+#define PACK(size, alloc) ((size) | (alloc)) 
 
 /* Read and write a word at address p */ 
 #define GET(p)		(*(unsigned int *) (p)) 
@@ -68,7 +68,16 @@ team_t team = {
 #define NEXT_BLKP(bp)	((char *) (bp) + GET_SIZE(((char *) (bp) - WSIZE))) 
 #define PREV_BLKP(bp)	((char *) (bp) - GET_SIZE(((char *) (bp) - DSIZE)))
 
-void *heap_listp;
+//for explicit list need more macros
+//at least one for prev and next 
+
+#define PREV_FREE(bp)  (*(char**)bp) //now need to intialize these feilds for explicit free list
+#define NEXT_FEEE(bp) (*(char**)(bp+DSIZE))
+
+
+
+void *heap_listp =0;
+void *free_listp =0; /pointer to what will be first block
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -80,6 +89,7 @@ static void place(void *bp, size_t asize);
 
 int mm_init(void)
 {
+
 	/* Create the initial empty heap */ 
 	if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
 		return -1; 
@@ -133,7 +143,7 @@ static void *coalesce(void *bp)
 		return bp;
 	}
 
-	else if (prev_alloc && ! next_alloc) {		/* Case 2 */
+	else if (prev_alloc && !next_alloc) {		/* Case 2 */
 		size += GET_SIZE(HDRP(NEXT_BLKP(bp))); 
 		PUT(HDRP(bp), PACK(size, 0)); 
 		PUT(FTRP(bp), PACK(size, 0));
@@ -199,9 +209,9 @@ static void place(void *bp, size_t asize)
 {
 	size_t csize = GET_SIZE(HDRP(bp));
 
-    if((csize - asize) >= (2*DSIZE)){
-        PUT(HDRP(bp), PACK(asize, 1));
-        PUT(FTRP(bp), PACK(asize, 1));
+    if((csize - asize) >= (2*DSIZE)){ //this is splitting the block
+        PUT(HDRP(bp), PACK(asize, 1)); //block header
+        PUT(FTRP(bp), PACK(asize, 1)); //block footr
         bp = NEXT_BLKP(bp);
         PUT(HDRP(bp), PACK(csize - asize, 0));
         PUT(FTRP(bp), PACK(csize - asize, 0));
