@@ -45,7 +45,7 @@ team_t team = {
 /* Basic constants and macros */ 
 #define	WSIZE	4 /* Word and header/footer size (bytes) */ 
 #define DSIZE	8 /* Double word size (bytes) */ 
-#define CHUNKSIZE (1<<24) /* Extend heap by this amount (bytes) */
+#define CHUNKSIZE (1<<12) /* Extend heap by this amount (bytes) */
 // this means extending by 24 bytes is that right?
 //i think i need to chane chunk size then to 24 was 12 
 //wait but min size is sixteen bc header and footer and pointer space
@@ -54,7 +54,8 @@ team_t team = {
 #define PSPACE 8 
   
 //min size now is different with double alignment has to be 24
-#define MIN_SIZE 16 //was 24 
+#define MIN_SIZE 24  //was 16
+
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 
@@ -85,8 +86,8 @@ team_t team = {
 //might need to change pointer type
 
 
-void *heap_listp = 0;
-void *free_listp = 0; //pointer to what will be first block
+void *heap_listp; //pointer to beginning of heap
+void *free_listp; //pointer to what will be first block
 
 //i feel like i should add prev alloc to header value do i have to change pack? or need new func. 
 
@@ -101,21 +102,24 @@ static void place(void *bp, size_t asize);
 
 int mm_init(void)
 {
-
 	/* Create the initial empty heap */ 
-	if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
-		return -1; 
+	if ((heap_listp = mem_sbrk(MIN_SIZE)) == (void *)-1)
+		//print error message
+		return -1; //expanation failed
 	PUT(heap_listp, 0);				/* Alignment padding */ 
 	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));	/* Prologue header */ //4
 	PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1));	/* Prologue footer */ //8
 	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
 	heap_listp += (2*WSIZE); //points to first block in heap but i only care about free list 
 
-	free_listp = 0; //points to nothing bc nothing on list yet i think? 
+	free_listp = heap_listp; //tabby says when you intialize free list points to beinging of heap bc it is free makes sense
+	//might need to set prev to null and next to bp 
+	
+	//points to nothing bc nothing on list yet i think? 
 	//this means i need a way to traverse the free list, gotta write a helper oh zoinks
 	/* Extend the empty heap with a free block of CHUNKSIZE bytes */ 
 	if (extend_heap(CHUNKSIZE/WSIZE) == NULL) //shouldn't i only be extending by min size? 
-		return -1; 
+		return -1; //this means failed
 	return 0;
 }
 
@@ -211,11 +215,18 @@ void *mm_malloc(size_t size)
 
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
     void *bp; //wait i need to change this to traverse free list 
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
+	for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
+        if (GET_SIZE(bp) == asize){ //if size matches works
+			return bp;
+		}
+    }
+
+ /*   for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
         }
     }
+	*/
     return NULL; //not fit 
 }
 
