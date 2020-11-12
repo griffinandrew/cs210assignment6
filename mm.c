@@ -52,7 +52,7 @@ team_t team = {
 
 //need 2 extra words for each block bc of next and prev
 #define PSPACE 8 
-
+  
 //min size now is different with double alignment has to be 24
 #define MIN_SIZE 16 //was 24 
 
@@ -269,7 +269,6 @@ void fr_add(void* bp){
 
 void fr_del(void *bp){ 
 	//maybe like
-	PREV_FREE(bp) = NEXT_FREE(bp); // that doesnt make sense 
-	//need to get this to skip
-	NEXT_FREE(bp) = PREV_FREE(bp);
+	NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
+	PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
 }
