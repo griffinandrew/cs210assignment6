@@ -46,7 +46,9 @@ team_t team = {
 #define	WSIZE	4 /* Word and header/footer size (bytes) */ 
 #define DSIZE	8 /* Double word size (bytes) */ 
 #define CHUNKSIZE (1<<24) /* Extend heap by this amount (bytes) */
+// this means extending by 24 bytes is that right?
 //i think i need to chane chunk size then to 24 was 12 
+//wait but min size is sixteen bc header and footer and pointer space
 
 //need 2 extra words for each block bc of next and prev
 #define PSPACE 8 
@@ -104,13 +106,15 @@ int mm_init(void)
 	if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
 		return -1; 
 	PUT(heap_listp, 0);				/* Alignment padding */ 
-	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));	/* Prologue header */ 
-	PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1));	/* Prologue footer */ 
-	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Epilogue header */ 
-	heap_listp += (2*WSIZE);
+	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));	/* Prologue header */ //4
+	PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1));	/* Prologue footer */ //8
+	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
+	heap_listp += (2*WSIZE); //points to first block in heap but i only care about free list 
 
+	free_listp = 0; //points to nothing bc nothing on list yet i think? 
+	//this means i need a way to traverse the free list, gotta write a helper oh zoinks
 	/* Extend the empty heap with a free block of CHUNKSIZE bytes */ 
-	if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
+	if (extend_heap(CHUNKSIZE/WSIZE) == NULL) //shouldn't i only be extending by min size? 
 		return -1; 
 	return 0;
 }
@@ -118,7 +122,7 @@ int mm_init(void)
 static void *extend_heap(size_t words)
 {
 	char *bp; 
-	size_t size;
+	size_t size; //this looks pretty good dont think needs any changes
 
 	/* Allocate an even number of words to maintain alignment */ 
 	size = (words % 2) ? (words+1) * WSIZE : words * WSIZE; 
@@ -136,14 +140,14 @@ static void *extend_heap(size_t words)
 
 void mm_free(void *bp)
 {
-	size_t size = GET_SIZE(HDRP(bp));
+	size_t size = GET_SIZE(HDRP(bp)); //think this is mostly good too
 
 	PUT(HDRP(bp), PACK(size, 0)); 
 	PUT(FTRP(bp), PACK(size, 0)); 
 	coalesce(bp);
 }
 
-static void *coalesce(void *bp)
+static void *coalesce(void *bp) //this will def be different look at txt / lecture notes for procedure 
 {
 	size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
 	size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
@@ -189,23 +193,23 @@ void *mm_malloc(size_t size)
 	if(size <= DSIZE)
 		asize = 2*DSIZE; 
 	else
-		asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
+		asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE); //think this part is mostly good might need to change alignemt stuff bc new size
 
 	/* Search the free list for a fit */ 
-	if((bp = find_fit(asize)) != NULL) {
+	if((bp = find_fit(asize)) != NULL) { //think this is fine
 		place (bp, asize); 
 		return bp;
 	}
 
 	/* No fit found. Get more memory and place the block */ 
 	extendsize = MAX(asize, CHUNKSIZE); 
-	if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
+	if ((bp = extend_heap(extendsize/WSIZE)) == NULL) //look at max and how it relates to chunk / word
 		return NULL; 
 	place (bp, asize);
 	return bp;
 }
 
-static void *find_fit(size_t asize){ //this is first fit 
+static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
     void *bp;
     for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
@@ -215,7 +219,7 @@ static void *find_fit(size_t asize){ //this is first fit
     return NULL; //not fit 
 }
 
-static void place(void *bp, size_t asize)
+static void place(void *bp, size_t asize) //needs to change to account for pointers 
 {
 	size_t csize = GET_SIZE(HDRP(bp));
 
@@ -252,4 +256,4 @@ void *mm_realloc(void *ptr, size_t size)
 
 
 //helper functiin for travseing free list and policy for free or unfreed
-//
+//going to need helper functions to show free list and alloc list maybe to check the block and other stuff too
