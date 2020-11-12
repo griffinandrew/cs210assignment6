@@ -210,8 +210,8 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
-    void *bp;
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
+    void *bp; //wait i need to change this to traverse free list 
+    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
         }
@@ -226,6 +226,7 @@ static void place(void *bp, size_t asize) //needs to change to account for point
     if((csize - asize) >= (2*DSIZE)){ //this is splitting the block
         PUT(HDRP(bp), PACK(asize, 1)); //block header
         PUT(FTRP(bp), PACK(asize, 1)); //block footr
+		fr_del(bp); //free block is added to heap and needs to be deleted from free 
         bp = NEXT_BLKP(bp);
         PUT(HDRP(bp), PACK(csize - asize, 0));
         PUT(FTRP(bp), PACK(csize - asize, 0));
@@ -233,6 +234,7 @@ static void place(void *bp, size_t asize) //needs to change to account for point
     else{
         PUT(HDRP(bp),PACK(csize, 1));
         PUT(FTRP(bp),PACK(csize, 1));
+		fr_del(bp); ///free block is added to heap and needs to be deleted from free 
     }
 }
 
@@ -272,3 +274,19 @@ void fr_del(void *bp){
 	NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
 	PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
 }
+
+
+void show_block(void *bp){
+	
+	size_t hd_size = GET_SIZE(HDRP(bp));
+	size_t ft_size = GET_SIZE(FTRP(bp));
+
+	unsigned int hd_alloc = GET_ALLOC(HDRP(bp));
+	unsigned int ft_alloc = GET_ALLOC(FTRP(bp));
+
+	printf("header = %zu\n", &hd_size);
+	printf("footer = %zu\n", &ft_size);
+	printf("header aloocated = %u\n", &hd_alloc);
+	printf("footer allocated = %u\n", &ft_alloc);
+}
+
