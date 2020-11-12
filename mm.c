@@ -81,7 +81,7 @@ team_t team = {
 //at least one for prev and next 
 
 #define PREV_FREE(bp)  (*(void**)bp) //now need to intialize these feilds for explicit free list
-#define NEXT_FEEE(bp) (*(void**)(bp+DSIZE))
+#define NEXT_FREE(bp) (*(void**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
 //might need to change pointer type
 
 
@@ -257,3 +257,19 @@ void *mm_realloc(void *ptr, size_t size)
 
 //helper functiin for travseing free list and policy for free or unfreed
 //going to need helper functions to show free list and alloc list maybe to check the block and other stuff too
+
+
+//function to add block to free list 
+void fr_add(void* bp){
+	NEXT_FREE(bp) = free_listp; //add to begining of list
+	PREV_FREE(free_listp) = bp; //free list prev is now one added
+	PREV_FREE(bp) = NULL; //new start of list prev will be null
+	free_listp = bp; //this is new start
+}
+
+void fr_del(void *bp){ 
+	//maybe like
+	PREV_FREE(bp) = NEXT_FREE(bp); // that doesnt make sense 
+	//need to get this to skip
+	NEXT_FREE(bp) = PREV_FREE(bp);
+}
