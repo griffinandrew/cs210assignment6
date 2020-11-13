@@ -26,7 +26,7 @@ team_t team = {
     /* bu username : eg. jappavoo */
     "gheyrich",
     /* full name : eg. jonathan appavoo */
-    "Griffin",
+    "Griffin Heyrich",
     /* email address : jappavoo@bu.edu */
     "gheyrich@bu.edu",
     "",
@@ -99,11 +99,13 @@ static void *coalesce(void *bp);
 void *mm_malloc(size_t size);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
+void fr_del(void *bp);
+void fr_add(void *bp);
 
 int mm_init(void)
 {
 	/* Create the initial empty heap */ 
-	if ((heap_listp = mem_sbrk(MIN_SIZE)) == (void *)-1)
+	if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1) //look if this should be 24 or 16 
 		//print error message
 		return -1; //expanation failed
 	PUT(heap_listp, 0);				/* Alignment padding */ 
@@ -216,7 +218,7 @@ void *mm_malloc(size_t size)
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
     void *bp; //wait i need to change this to traverse free list 
 	for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
-        if (GET_SIZE(bp) == asize){ //if size matches works
+        if (GET_SIZE(bp) <= asize){ //if size matches works
 			return bp;
 		}
     }
