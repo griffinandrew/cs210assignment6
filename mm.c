@@ -71,19 +71,29 @@ team_t team = {
 #define GET_ALLOC(p)	(GET (p) & 0x1)
 
 /* Given block ptr bp, compute address of its header and footer */ 
-#define HDRP(bp)	((void *) (bp) - WSIZE) 
-#define FTRP(bp)	((void *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
+//#define HDRP(bp)	((void *) (bp) - WSIZE) 
+//#define FTRP(bp)	((void *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
+
+#define HDRP(bp)	((char *) (bp) - WSIZE) 
+#define FTRP(bp)	((char *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
 
 /* Given block ptr bp, compute address of next and previous blocks */ 
 #define NEXT_BLKP(bp)	((void *) (bp) + GET_SIZE(((void *) (bp) - WSIZE))) 
 #define PREV_BLKP(bp)	((void *) (bp) - GET_SIZE(((void *) (bp) - DSIZE)))
 
+//#define NEXT_BLKP(bp)	((char *) (bp) + GET_SIZE(((void *) (bp) - WSIZE))) 
+//#define PREV_BLKP(bp)	((char *) (bp) - GET_SIZE(((void *) (bp) - DSIZE)))
+
+
 //for explicit list need more macros
 //at least one for prev and next 
 
-#define PREV_FREE(bp)  (*(void**)bp) //now need to intialize these feilds for explicit free list
-#define NEXT_FREE(bp) (*(void**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
+//#define PREV_FREE(bp)  (*(void**)bp) //now need to intialize these feilds for explicit free list
+//#define NEXT_FREE(bp) (*(void**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
 //might need to change pointer type
+
+#define PREV_FREE(bp)  (*(char**)bp) //now need to intialize these feilds for explicit free list
+#define NEXT_FREE(bp) (*(char**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
 
 
 void *heap_listp; //pointer to beginning of heap
@@ -99,8 +109,9 @@ static void *coalesce(void *bp);
 void *mm_malloc(size_t size);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
-void fr_del(void *bp);
-void fr_add(void *bp);
+static void fr_del(void *bp);
+static void fr_add(void *bp);
+static void show_block(void *bp);
 
 int mm_init(void)
 {
@@ -189,7 +200,7 @@ void *mm_malloc(size_t size)
 {
 	size_t asize;		/* Adjusted block size */ 
 	size_t extendsize;	/* Amount to extend heap if no fit */ 
-	char *bp;
+	void *bp;
 
 	/* Ignore spurious requests */ 
 	if(size == 0)
@@ -275,21 +286,26 @@ void *mm_realloc(void *ptr, size_t size)
 
 
 //function to add block to free list 
-void fr_add(void* bp){
+static void fr_add(void* bp){
 	NEXT_FREE(bp) = free_listp; //add to begining of list
 	PREV_FREE(free_listp) = bp; //free list prev is now one added
 	PREV_FREE(bp) = NULL; //new start of list prev will be null
 	free_listp = bp; //this is new start
 }
 
-void fr_del(void *bp){ 
+static void fr_del(void *bp){ 
 	//maybe like
-	NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
-	PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
+	if(PREV_FREE(bp) == NULL){ //if beginning of list free list pointer should point to the next block in list
+		free_listp = NEXT_FREE(bp); 
+	}
+	else {
+		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
+	}
 }
 
 
-void show_block(void *bp){
+static void show_block(void *bp){
 	
 	size_t hd_size = GET_SIZE(HDRP(bp));
 	size_t ft_size = GET_SIZE(FTRP(bp));
@@ -297,9 +313,9 @@ void show_block(void *bp){
 	unsigned int hd_alloc = GET_ALLOC(HDRP(bp));
 	unsigned int ft_alloc = GET_ALLOC(FTRP(bp));
 
-	printf("header = %zu\n", &hd_size);
-	printf("footer = %zu\n", &ft_size);
-	printf("header aloocated = %u\n", &hd_alloc);
-	printf("footer allocated = %u\n", &ft_alloc);
+	printf("header = %p\n", &hd_size);
+	printf("footer = %p\n", &ft_size);
+	printf("header aloocated = %p\n", &hd_alloc);
+	printf("footer allocated = %p\n", &ft_alloc);
 }
 
