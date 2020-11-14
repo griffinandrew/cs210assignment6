@@ -92,15 +92,13 @@ team_t team = {
 //#define NEXT_FREE(bp) (*(void**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
 //might need to change pointer type
 
-#define PREV_FREE(bp)  (*(char**)bp) //now need to intialize these feilds for explicit free list
+#define PREV_FREE(bp) (*(char**)bp) //now need to intialize these feilds for explicit free list
 #define NEXT_FREE(bp) (*(char**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
-
 
 void *heap_listp; //pointer to beginning of heap
 void *free_listp; //pointer to what will be first block
 
 //i feel like i should add prev alloc to header value do i have to change pack? or need new func. 
-
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -115,7 +113,7 @@ static void show_block(void *bp);
 
 int mm_init(void)
 {
-	/* Create the initial empty heap */ 
+	/* Create the initial empty heap */ //this word size might be wrong 
 	if ((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1) //look if this should be 24 or 16 
 		//print error message
 		return -1; //expanation failed
