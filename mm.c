@@ -43,7 +43,7 @@ team_t team = {
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 /* Basic constants and macros */ 
-#define	WSIZE	sizeof(void *) /* Word and header/footer size (bytes) */ 
+#define	WSIZE	sizeof(void *) /* Word and header/footer size (bytes) */ //void is 8 btyes on 64
 #define DSIZE	2*WSIZE /* Double word size (bytes) */ 
 #define CHUNKSIZE (1<<12) /* Extend heap by this amount (bytes) */
 // this means extending by 24 bytes is that right?
@@ -110,12 +110,15 @@ static void place(void *bp, size_t asize);
 static void fr_del(void *bp);
 static void fr_add(void *bp);
 static void show_block(void *bp);
+void check_blk(void*bp);
+int mm_check(void);
 
 int mm_init(void)
 {
 	/* Create the initial empty heap */ //this word size might be wrong 
 	if ((heap_listp = mem_sbrk(4*WSIZE)) == NULL) //look if this should be 24 or 16 
 		//print error message
+		printf("error in init\n");
 		return -1; //expanation failed
 	PUT(heap_listp, 0);				/* Alignment padding */ 
 	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));	/* Prologue header */ //4
@@ -136,12 +139,12 @@ int mm_init(void)
 
 static void *extend_heap(size_t words)
 {
-	char *bp; 
+	void *bp; 
 	size_t size; //this looks pretty good dont think needs any changes
 
 	/* Allocate an even number of words to maintain alignment */ 
 	size = (words % 2) ? (words+1) * WSIZE : words * WSIZE; 
-	if ((long) (bp = mem_sbrk(size)) == -1)
+	if ((bp = mem_sbrk(size)) == (void*)-1)
 		return NULL;
 
 	/* Initialize free block header/footer and the epilogue header */ 
@@ -169,7 +172,7 @@ void mm_free(void *bp)
 
 static void *coalesce(void *bp) //this will def be different look at txt / lecture notes for procedure 
 {
-	size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
+	size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp; 
 	size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
 	size_t size = GET_SIZE(HDRP(bp));
 
@@ -238,7 +241,7 @@ void *mm_malloc(size_t size)
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
     void *bp; //wait i need to change this to traverse free list 
 	for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
-        if (GET_SIZE(bp) <= asize){ //if size matches works
+        if (GET_SIZE(HDRP(bp)) >= asize){ //if size matches works
 			return bp;
 		}
     }
@@ -263,6 +266,7 @@ static void place(void *bp, size_t asize) //needs to change to account for point
         bp = NEXT_BLKP(bp);
         PUT(HDRP(bp), PACK(csize - asize, 0));
         PUT(FTRP(bp), PACK(csize - asize, 0));
+		coalesce(bp); //forgot to coalesce at end
     }
     else{
         PUT(HDRP(bp),PACK(csize, 1));
@@ -327,3 +331,51 @@ static void show_block(void *bp){
 	printf("footer allocated = %p\n", &ft_alloc);
 }
 
+int mm_check(void){
+	char *bp, *p, *cp;
+	void *heap_begin = mem_heap_lo();
+	void *heap_end = mem_heap_hi();
+	for(bp = heap_begin; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
+		check_blk(bp);
+		//show_block(bp);
+		if(&bp < (size_t)heap_begin || &bp > (size_t)heap_end){
+			printf("Error pointer is out of bounds %p\n",bp);
+		}
+		if(GET_ALLOC(bp) == 0 && GET_ALLOC(NEXT_BLKP(bp)) == 0){
+		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP(bp));
+		}
+		if(GET_ALLOC(bp) == 0){
+			for (cp = free_listp; ; cp = NEXT_BLKP(cp)){
+				if(HDRP(bp) == HDRP(cp)){
+					printf("in free list");
+				}
+			}
+			printf("not in free list");
+		}
+		
+	}
+	for (p = free_listp; ; p = NEXT_BLKP(p)){
+		if(GET_ALLOC(HDRP(p)) != 0){
+			printf("error not free block");
+		}
+	
+
+
+
+}
+}
+
+void check_blk(void *bp){
+	//first check alignment 
+	if((int)bp % 8 == 0){
+		printf("error not aligned");
+	}
+	if(GET(FTRP(bp)) != GET(HDRP(bp))){
+		printf("error header and footer do not match");
+	}
+}
+
+
+//int main(){
+//	mm_check();
+//}
