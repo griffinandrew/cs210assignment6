@@ -328,9 +328,16 @@ void *mm_realloc(void *ptr, size_t size)
 
 //function to add block to free list 
 static void fr_add(void* bp){
-	NEXT_FREE(bp) = free_listp; //add to begining of list
-	PREV_FREE(free_listp) = bp; //free list prev is now one added
+	if(free_listp == NULL){
+		PREV_FREE(bp) = NULL;
+		NEXT_FREE(bp) = NULL;
+		free_listp = bp;
+		return;
+	}
 	PREV_FREE(bp) = NULL; //new start of list prev will be null
+	NEXT_FREE(bp) = free_listp; //add to begining of list
+	PREV_FREE(free_listp) = bp; //free list prev is now one added WTF SEGFAULT HERE
+	 //maybe beacuse it is set to NULL intitally
 	free_listp = bp; //this is new start
 }
 
@@ -343,7 +350,7 @@ static void fr_del(void *bp){
 	}
 	else{
 		free_listp = NEXT_FREE(bp);
-		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp);
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this is new seg fault
 
 	}
 	/*if(PREV_FREE(bp) == NULL){ //if beginning of list free list pointer should point to the next block in list
