@@ -343,17 +343,43 @@ static void fr_add(void* bp){
 
 static void fr_del(void *bp){ 
 	//maybe like
+	if(free_listp == 0){
+		return; //nothing on list
+	}
+	//kind of like coalesce 4 diff cases for pointer arrangement
 
-	if(PREV_FREE(bp)){
+	//if both are prev and next is null nothing to delete
+	if((NEXT_FREE(bp) == NULL) && (PREV_FREE(bp) == NULL)){
+		free_listp = 0;
+	}
+	//next is null prev is alloc
+	if((NEXT_FREE(bp) == NULL) && (PREV_FREE(bp) != NULL)){
+		NEXT_FREE(PREV_FREE(bp)) = NULL; //last on list
+	}
+	//next is alloc prev is null
+	if((NEXT_FREE(bp) != NULL) && (PREV_FREE(bp) == NULL)){ //first on list
+		free_listp = NEXT_FREE(bp);
+		PREV_FREE(free_listp) = NULL; 
+	}
+	//next and prev both not null
+	else{
 		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
-		//PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp);
+	}
+
+
+
+
+/*	if(PREV_FREE(bp)){
+		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
 	}
 	else{
 		free_listp = NEXT_FREE(bp);
 		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this is new seg fault
 
 	}
-	/*if(PREV_FREE(bp) == NULL){ //if beginning of list free list pointer should point to the next block in list
+	if(PREV_FREE(bp) == NULL){ //if beginning of list free list pointer should point to the next block in list
 		free_listp = NEXT_FREE(bp); 
 	}
 	else {
