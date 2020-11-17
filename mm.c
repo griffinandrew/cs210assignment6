@@ -94,7 +94,7 @@ team_t team = {
 //might need to change pointer type
 
 #define PREV_FREE(bp) (*(void**)((void*)(bp))) //now need to intialize these feilds for explicit free list
-#define NEXT_FREE(bp) (*(void**)((void*)(bp+WSIZE))) //is this 8 or 4? depends how i set up
+#define NEXT_FREE(bp) (*(void**)((void*)(bp+DSIZE))) //is this 8 or 4? depends how i set up
 
 //needed to put pointers into postion
 
@@ -119,7 +119,7 @@ int mm_check(void);
 int mm_init(void)
 {
 	/* Create the initial empty heap */ //this word size might be wrong 
-	if ((heap_listp = mem_sbrk(6*WSIZE)) == (void*) -1) //look if this should be 24 or 16 
+	if ((heap_listp = mem_sbrk(4*WSIZE)) == (void*) -1) //look if this should be 24 or 16 
 		//print error message
 		//printf("error in init\n");
 		return -1; //expanation failed
@@ -131,12 +131,12 @@ int mm_init(void)
 
 	//PUT(heap_listp + (3 * WSIZE), PACK(0, 1));	/* Prologue footer */ //8
 	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
-	PUT(heap_listp + (4*WSIZE), 0);
-	PUT(heap_listp + (5*WSIZE), 0);
+	//PUT(heap_listp + (4*WSIZE), 0);
+	//PUT(heap_listp + (5*WSIZE), 0);
 
 
 
-	free_listp = heap_listp + 4*WSIZE;
+	//free_listp = heap_listp + 4*WSIZE;
 	heap_listp += (2*WSIZE); //points to first block in heap but i only care about free list 
 //figure out how to properly init prev and next
 
@@ -147,12 +147,12 @@ int mm_init(void)
 	if (extend_heap(CHUNKSIZE/WSIZE) == NULL) //shouldn't i only be extending by min size? 
 		return -1; //this means failed
 
-	//free_listp = heap_listp + DSIZE; //d size for the heap extend we just did
+	free_listp = heap_listp + DSIZE; //d size for the heap extend we just did
 	//tabby says when you intialize free list points to beinging of heap bc it is free makes sense
 	//might need to set prev to null and next to bp 
 	
-	//NEXT_FREE(free_listp) = NULL;
-	//PREV_FREE(free_listp) = NULL;
+	NEXT_FREE(free_listp) = NULL;
+	PREV_FREE(free_listp) = NULL;
 
 	return 0;
 }
@@ -165,9 +165,9 @@ static void *extend_heap(size_t words)
 	/* Allocate an even number of words to maintain alignment */ 
 	size = (words % 2) ? (words+1) * WSIZE : words * WSIZE; 
 	//size = ALIGN(words);
-	if(size < MIN_SIZE){
-		size = MIN_SIZE;
-	}
+	//if(size < MIN_SIZE){
+	//	size = MIN_SIZE;
+	//}
 	if ((bp = mem_sbrk(size)) == (void*)-1)
 		return NULL;
 
@@ -271,7 +271,7 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
-    void *bp = GET(free_listp); //wait i need to change this to traverse free list 
+    void *bp = free_listp; //wait i need to change this to traverse free list 
 	
 	while(bp != NULL){
 		if (asize <= GET_SIZE(HDRP(bp))){
@@ -383,7 +383,8 @@ static void fr_del(void *bp){
 	//next and prev both not null
 	else{
 		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp); //seg fault here must be setting to null 
-		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp);
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //why seg fault here
+		
 	}
 
 
