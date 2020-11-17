@@ -217,10 +217,28 @@ void *mm_realloc(void *ptr, size_t size)
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
+	size_t old_size;
+	size_t asize;
     
+	if(size == 0){
+		mm_free(ptr);
+		return NULL;
+	}
+	if(ptr == NULL){
+		return mm_malloc(size);
+	}
+
+
+	old_size = GET_SIZE(ptr);
+	asize = size + old_size;
+	if(asize <= old_size){
+		return ptr;
+	}
+
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
+
     copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
     if (size < copySize)
       copySize = size;
