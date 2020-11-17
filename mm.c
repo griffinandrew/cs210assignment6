@@ -56,6 +56,7 @@ team_t team = {
 //min size now is different with double alignment has to be 24
 #define MIN_SIZE 16  //was 24
 #define FREE_SIZE 16 //intial free list needs to have min size 
+#define HEAP_SIZE 24
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 
@@ -93,7 +94,7 @@ team_t team = {
 //might need to change pointer type
 
 #define PREV_FREE(bp) (*(void**)((void*)(bp))) //now need to intialize these feilds for explicit free list
-#define NEXT_FREE(bp) (*(void**)((void*)(bp+DSIZE))) //is this 8 or 4? depends how i set up
+#define NEXT_FREE(bp) (*(void**)((void*)(bp+WSIZE))) //is this 8 or 4? depends how i set up
 
 //needed to put pointers into postion
 
@@ -118,23 +119,26 @@ int mm_check(void);
 int mm_init(void)
 {
 	/* Create the initial empty heap */ //this word size might be wrong 
-	if ((heap_listp = mem_sbrk(MIN_SIZE)) == NULL) //look if this should be 24 or 16 
+	if ((heap_listp = mem_sbrk(6*WSIZE)) == (void*) -1) //look if this should be 24 or 16 
 		//print error message
 		//printf("error in init\n");
 		return -1; //expanation failed
 	PUT(heap_listp, 0);				/* Alignment padding */ 
 	//PUT(heap_listp , PACK(DSIZE, 1));	/* Prologue header */ //4
-	
 	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1)); //need to init free list this is for pointer next 
 	PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1)); //for prev
-	
-	//PUT(heap_listp + (3*WSIZE), PACK(0, 0));
 
-	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Prologue footer */ //8
-	//PUT(heap_listp + (4*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
+
+	//PUT(heap_listp + (3 * WSIZE), PACK(0, 1));	/* Prologue footer */ //8
+	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
+	PUT(heap_listp + (4*WSIZE), 0);
+	PUT(heap_listp + (5*WSIZE), 0);
+
+
+
+	free_listp = heap_listp + 4*WSIZE;
 	heap_listp += (2*WSIZE); //points to first block in heap but i only care about free list 
-
-	
+//figure out how to properly init prev and next
 
 	//points to nothing bc nothing on list yet i think? 
 	//this means i need a way to traverse the free list, gotta write a helper oh zoinks
@@ -143,12 +147,13 @@ int mm_init(void)
 	if (extend_heap(CHUNKSIZE/WSIZE) == NULL) //shouldn't i only be extending by min size? 
 		return -1; //this means failed
 
-	free_listp = heap_listp+DSIZE; //d size for the heap extend we just did
+	//free_listp = heap_listp + DSIZE; //d size for the heap extend we just did
 	//tabby says when you intialize free list points to beinging of heap bc it is free makes sense
 	//might need to set prev to null and next to bp 
 	
-	NEXT_FREE(free_listp) = NULL;
-	PREV_FREE(free_listp) = NULL;
+	//NEXT_FREE(free_listp) = NULL;
+	//PREV_FREE(free_listp) = NULL;
+
 	return 0;
 }
 
@@ -194,7 +199,7 @@ void mm_free(void *bp)
 
 static void *coalesce(void *bp) //this will def be different look at txt / lecture notes for procedure 
 {
-	size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp; 
+	size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
 	size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
 	size_t size = GET_SIZE(HDRP(bp));
 
@@ -266,12 +271,25 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
-    void *bp; //wait i need to change this to traverse free list 
-	for (bp = free_listp; bp != NULL; bp = NEXT_FREE(bp)){ //this should be bp = freelistp
-        if ((asize <= GET_SIZE(HDRP(bp))) && (!GET_ALLOC(HDRP(bp))) ){ //if size matches works
+    void *bp = GET(free_listp); //wait i need to change this to traverse free list 
+	
+	while(bp != NULL){
+		if (asize <= GET_SIZE(HDRP(bp))){
 			return bp;
 		}
-    }
+		bp = NEXT_FREE(bp);
+	}
+	
+	
+	
+	
+	//for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0 ; bp = NEXT_FREE(bp)){ //npow this set faults
+		//this should be bp = freelistp
+    //    if (asize <= GET_SIZE(HDRP(bp))) { //if size matches works 
+		//seg fault here again
+		//	return bp;
+//		}
+ //   }
 
  /*   for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
@@ -353,17 +371,18 @@ static void fr_del(void *bp){
 		free_listp = 0;
 	}
 	//next is null prev is alloc
-	if((NEXT_FREE(bp) == NULL) && (PREV_FREE(bp) != NULL)){
-		NEXT_FREE(PREV_FREE(bp)) = NULL; //last on list
+	else if((NEXT_FREE(bp) == NULL) && (PREV_FREE(bp) != NULL)){
+		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);//last on list
+		//setting null equal to null 
 	}
 	//next is alloc prev is null
-	if((NEXT_FREE(bp) != NULL) && (PREV_FREE(bp) == NULL)){ //first on list
-		free_listp = NEXT_FREE(bp);
-		PREV_FREE(free_listp) = NULL; 
+	else if((NEXT_FREE(bp) != NULL) && (PREV_FREE(bp) == NULL)){ //first on list
+		//free_listp = NEXT_FREE(bp);
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //seg fault here is it bc free_listp prev is intially null
 	}
 	//next and prev both not null
 	else{
-		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
+		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp); //seg fault here must be setting to null 
 		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp);
 	}
 
