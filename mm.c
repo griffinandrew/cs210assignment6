@@ -43,7 +43,7 @@ team_t team = {
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 /* Basic constants and macros */ 
-#define	WSIZE	sizeof(void *) /* Word and header/footer size (bytes) */ //void is 8 btyes on 64
+#define	WSIZE	 4 //sizeof(void *) /* Word and header/footer size (bytes) */ //void is 8 btyes on 64
 #define DSIZE	2*WSIZE /* Double word size (bytes) */ 
 #define CHUNKSIZE (1<<12) /* Extend heap by this amount (bytes) */
 // this means extending by 24 bytes is that right?
@@ -54,8 +54,8 @@ team_t team = {
 #define PSPACE 8 
   
 //min size now is different with double alignment has to be 24
-#define MIN_SIZE 24  //was 16
-
+#define MIN_SIZE 16  //was 24
+#define FREE_SIZE 16 //intial free list needs to have min size 
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 
@@ -67,15 +67,15 @@ team_t team = {
 #define PUT(p, val)	(*(unsigned int *) (p) = (val))
 
 /* Read the size and allocated fields from address p */ 
-#define GET_SIZE(p)	(GET (p) & ~0x7) 
+#define GET_SIZE(p)	   (GET (p) & ~0x7) 
 #define GET_ALLOC(p)	(GET (p) & 0x1)
 
 /* Given block ptr bp, compute address of its header and footer */ 
 //#define HDRP(bp)	((void *) (bp) - WSIZE) 
 //#define FTRP(bp)	((void *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
 
-#define HDRP(bp)	((char *) (bp) - WSIZE) 
-#define FTRP(bp)	((char *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
+#define HDRP(bp)	((void *) (bp) - WSIZE) 
+#define FTRP(bp)	((void *) (bp) + GET_SIZE (HDRP (bp)) - DSIZE)
 
 /* Given block ptr bp, compute address of next and previous blocks */ 
 #define NEXT_BLKP(bp)	((void *) (bp) + GET_SIZE(((void *) (bp) - WSIZE))) 
@@ -92,11 +92,13 @@ team_t team = {
 //#define NEXT_FREE(bp) (*(void**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
 //might need to change pointer type
 
-#define PREV_FREE(bp) (*(char**)bp) //now need to intialize these feilds for explicit free list
-#define NEXT_FREE(bp) (*(char**)(bp+DSIZE)) //is this 8 or 4? depends how i set up
+#define PREV_FREE(bp) (*(void**)((void*)(bp))) //now need to intialize these feilds for explicit free list
+#define NEXT_FREE(bp) (*(void**)((void*)(bp+DSIZE))) //is this 8 or 4? depends how i set up
 
-void *heap_listp = 0; //pointer to beginning of heap
-void *free_listp = 0; //pointer to what will be first block
+//needed to put pointers into postion
+
+static void *heap_listp = 0; //pointer to beginning of heap
+static void *free_listp = 0; //pointer to what will be first block
 
 //i feel like i should add prev alloc to header value do i have to change pack? or need new func. 
 
@@ -116,24 +118,37 @@ int mm_check(void);
 int mm_init(void)
 {
 	/* Create the initial empty heap */ //this word size might be wrong 
-	if ((heap_listp = mem_sbrk(4*WSIZE)) == NULL) //look if this should be 24 or 16 
+	if ((heap_listp = mem_sbrk(MIN_SIZE)) == NULL) //look if this should be 24 or 16 
 		//print error message
-		printf("error in init\n");
+		//printf("error in init\n");
 		return -1; //expanation failed
 	PUT(heap_listp, 0);				/* Alignment padding */ 
-	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));	/* Prologue header */ //4
-	PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1));	/* Prologue footer */ //8
-	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
+	//PUT(heap_listp , PACK(DSIZE, 1));	/* Prologue header */ //4
+	
+	PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1)); //need to init free list this is for pointer next 
+	PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1)); //for prev
+	
+	//PUT(heap_listp + (3*WSIZE), PACK(0, 0));
+
+	PUT(heap_listp + (3*WSIZE), PACK(0, 1));	/* Prologue footer */ //8
+	//PUT(heap_listp + (4*WSIZE), PACK(0, 1));	/* Epilogue header */ //12, so min size is 24?
 	heap_listp += (2*WSIZE); //points to first block in heap but i only care about free list 
 
-	free_listp = heap_listp; //tabby says when you intialize free list points to beinging of heap bc it is free makes sense
-	//might need to set prev to null and next to bp 
 	
+
 	//points to nothing bc nothing on list yet i think? 
 	//this means i need a way to traverse the free list, gotta write a helper oh zoinks
 	/* Extend the empty heap with a free block of CHUNKSIZE bytes */ 
+	
 	if (extend_heap(CHUNKSIZE/WSIZE) == NULL) //shouldn't i only be extending by min size? 
 		return -1; //this means failed
+
+	free_listp = heap_listp+DSIZE; //d size for the heap extend we just did
+	//tabby says when you intialize free list points to beinging of heap bc it is free makes sense
+	//might need to set prev to null and next to bp 
+	
+	NEXT_FREE(free_listp) = NULL;
+	PREV_FREE(free_listp) = NULL;
 	return 0;
 }
 
@@ -144,6 +159,10 @@ static void *extend_heap(size_t words)
 
 	/* Allocate an even number of words to maintain alignment */ 
 	size = (words % 2) ? (words+1) * WSIZE : words * WSIZE; 
+	//size = ALIGN(words);
+	if(size < MIN_SIZE){
+		size = MIN_SIZE;
+	}
 	if ((bp = mem_sbrk(size)) == (void*)-1)
 		return NULL;
 
@@ -159,8 +178,11 @@ static void *extend_heap(size_t words)
 void mm_free(void *bp)
 {
 
-	if (bp == NULL) { //need to insure that not freeing null
+	if (bp == 0) { //need to insure that not freeing null
 		return;
+	}
+	if(heap_listp == 0){
+		mm_init();
 	}
 
 	size_t size = GET_SIZE(HDRP(bp)); //think this is mostly good too
@@ -190,19 +212,21 @@ static void *coalesce(void *bp) //this will def be different look at txt / lectu
 
 	else if (!prev_alloc && next_alloc) {		/* Case 3 */
 		size += GET_SIZE(HDRP(PREV_BLKP(bp))); 
-		fr_del(PREV_BLKP(bp));
-		PUT(FTRP(bp), PACK(size, 0)); 
-		PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0)); 
 		bp = PREV_BLKP(bp);
+		fr_del(bp);
+		PUT(HDRP(bp), PACK(size, 0)); //edited to make prev_blkp
+		PUT(FTRP(bp), PACK(size, 0)); 
+		
 	}
 
 	else {						/* Case 4 */ 
 		size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp)));
 		fr_del(NEXT_BLKP(bp));
 		fr_del(PREV_BLKP(bp));
-		PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0)); 
-		PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
 		bp = PREV_BLKP(bp); 
+		PUT(HDRP(bp), PACK(size, 0)); 
+		PUT(FTRP(bp), PACK(size, 0));
+		
 	} 
 	fr_add(bp);
 	return bp;
@@ -217,13 +241,16 @@ void *mm_malloc(size_t size)
 	/* Ignore spurious requests */ 
 	if(size == 0)
 		return NULL;
+	if(heap_listp ==0){
+		mm_init();
+	}
 
 	/* Adjust block size to include overhead and alignment reqs. */ 
 	if(size <= DSIZE)
 		asize = 2*DSIZE; 
 	else
 		asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE); //think this part is mostly good might need to change alignemt stuff bc new size
-
+	//asize = MAX(ALIGN(size) +DSIZE,MIN_SIZE);
 	/* Search the free list for a fit */ 
 	if((bp = find_fit(asize)) != NULL) { //think this is fine
 		place (bp, asize); 
@@ -240,8 +267,8 @@ void *mm_malloc(size_t size)
 
 static void *find_fit(size_t asize){ //this is first fit, fine for now might want to use addressing or LIFO if can 
     void *bp; //wait i need to change this to traverse free list 
-	for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_BLKP(bp)){ //this should be bp = freelistp
-        if (GET_SIZE(HDRP(bp)) >= asize){ //if size matches works
+	for (bp = free_listp; bp != NULL; bp = NEXT_FREE(bp)){ //this should be bp = freelistp
+        if ((asize <= GET_SIZE(HDRP(bp))) && (!GET_ALLOC(HDRP(bp))) ){ //if size matches works
 			return bp;
 		}
     }
@@ -258,7 +285,7 @@ static void *find_fit(size_t asize){ //this is first fit, fine for now might wan
 static void place(void *bp, size_t asize) //needs to change to account for pointers 
 {
 	size_t csize = GET_SIZE(HDRP(bp));
-
+ //might need to change what it is checking
     if((csize - asize) >= (2*DSIZE)){ //this is splitting the block
         PUT(HDRP(bp), PACK(asize, 1)); //block header
         PUT(FTRP(bp), PACK(asize, 1)); //block footr
@@ -266,7 +293,8 @@ static void place(void *bp, size_t asize) //needs to change to account for point
         bp = NEXT_BLKP(bp);
         PUT(HDRP(bp), PACK(csize - asize, 0));
         PUT(FTRP(bp), PACK(csize - asize, 0));
-		coalesce(bp); //forgot to coalesce at end
+		fr_add(bp);
+		//coalesce(bp); //forgot to coalesce at end
     }
     else{
         PUT(HDRP(bp),PACK(csize, 1));
@@ -308,13 +336,25 @@ static void fr_add(void* bp){
 
 static void fr_del(void *bp){ 
 	//maybe like
-	if(PREV_FREE(bp) == NULL){ //if beginning of list free list pointer should point to the next block in list
+
+	if(PREV_FREE(bp)){
+		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
+		//PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
+	}
+	else{
+		free_listp = NEXT_FREE(bp);
+		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp);
+
+	}
+	/*if(PREV_FREE(bp) == NULL){ //if beginning of list free list pointer should point to the next block in list
 		free_listp = NEXT_FREE(bp); 
 	}
 	else {
+		
 		NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
 		PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp); //this lets it skip
 	}
+	*/
 }
 
 static void show_block(void *bp){
@@ -367,13 +407,16 @@ int mm_check(void){
 
 void check_blk(void *bp){
 	//first check alignment 
-	if((int)bp % 8 == 0){
+	if((int)bp % DSIZE == 0){
 		printf("error not aligned");
 	}
 	if(GET(FTRP(bp)) != GET(HDRP(bp))){
 		printf("error header and footer do not match");
 	}
 }
+
+
+
 
 
 //int main(){
