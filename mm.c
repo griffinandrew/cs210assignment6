@@ -230,7 +230,7 @@ void *mm_realloc(void *ptr, size_t size)
 		return NULL;
 	}
 	
-
+/*
 	old_size = GET_SIZE(HDRP(oldptr));
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 	asize = old_size - size;
@@ -250,8 +250,8 @@ void *mm_realloc(void *ptr, size_t size)
 		return oldptr;
 	}
 	else{
-		if (size > old_size){
-			if(((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
+		//if (size > old_size){
+			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
 			&& (old_size + next_size >= size) ){
 				PUT(HDRP(oldptr), PACK(size,1));
 				PUT(FTRP(oldptr), PACK(size,1));
@@ -266,8 +266,12 @@ void *mm_realloc(void *ptr, size_t size)
 				newptr = mm_malloc(size);
 				if (newptr == NULL)
       				return NULL;
-				//old_size = GET_SIZE(HDRP(oldptr));
-				memcpy(newptr, oldptr, size);
+				old_size = GET_SIZE(HDRP(oldptr));
+				if(size < old_size)
+				{
+					size = old_size;
+				}
+				memcpy(newptr, oldptr, old_size); //-DSIZE
 				mm_free(oldptr);
     			return newptr;
 			}
@@ -277,16 +281,16 @@ void *mm_realloc(void *ptr, size_t size)
 			//memcpy(newptr, oldptr, size);
 			//mm_free(oldptr);
     	//	return newptr;
-		}
+		//}
 		//if()
 		
 
 	}
 
 
-	//	1. If new < old -> shrink it
-//2. If new > old and next block is free and old + next >= new, expand it
-//3. If new > old and next block is free but old + next < new, or next block is not free -> malloc another block, copy the content to the new block, free the current block
+	//1. If new < old -> shrink it
+	//2. If new > old and next block is free and old + next >= new, expand it
+	//3. If new > old and next block is free but old + next < new, or next block is not free -> malloc another block, copy the content to the new block, free the current block
 
 
 		//copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
@@ -299,16 +303,18 @@ void *mm_realloc(void *ptr, size_t size)
 	//if next block is free and sum is greater than new then just extend current block
 
 
-/*
+*/
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
 
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+    copySize = GET_SIZE(HDRP(oldptr));
     if (size < copySize)
       copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
-	*/
+	
+
 }
+
