@@ -77,6 +77,9 @@ static void *coalesce(void *bp);
 void *mm_malloc(size_t size);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
+int mm_check(void);
+void check_blk(void *bp);
+static void show_block(void *bp);
 
 int mm_init(void)
 {
@@ -316,6 +319,58 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 	
-
 }
 
+
+int mm_check(void){
+	char *bp, *p, *cp;
+	void *heap_begin = mem_heap_lo();
+	void *heap_end = mem_heap_hi();
+	for(bp = heap_begin; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
+		check_blk(bp);
+		//show_block(bp);
+		if(&bp < (size_t)heap_begin || &bp > (size_t)heap_end){
+			printf("Error pointer is out of bounds %p\n",bp);
+		}
+		if(GET_ALLOC(bp) == 0 && GET_ALLOC(NEXT_BLKP(bp)) == 0){
+		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP(bp));
+		}
+		//if(GET_ALLOC(bp) == 0){
+		//	for (cp = free_listp; ; cp = NEXT_BLKP(cp)){
+		//		if(HDRP(bp) == HDRP(cp)){
+		//			printf("in free list");
+		//		}
+		//	}
+			//printf("not in free list");
+		//}
+	}
+	//for (p = free_listp; ; p = NEXT_BLKP(p)){
+	//	if(GET_ALLOC(HDRP(p)) != 0){
+	//		printf("error not free block");
+	//	}
+	//}
+}
+
+void check_blk(void *bp){
+	//first check alignment 
+	if((int)bp % DSIZE == 0){
+		printf("error not aligned");
+	}
+	if(GET(FTRP(bp)) != GET(HDRP(bp))){
+		printf("error header and footer do not match");
+	}
+}
+
+static void show_block(void *bp){
+	
+	size_t hd_size = GET_SIZE(HDRP(bp));
+	size_t ft_size = GET_SIZE(FTRP(bp));
+
+	unsigned int hd_alloc = GET_ALLOC(HDRP(bp));
+	unsigned int ft_alloc = GET_ALLOC(FTRP(bp));
+
+	printf("header = %p\n", &hd_size);
+	printf("footer = %p\n", &ft_size);
+	printf("header aloocated = %p\n", &hd_alloc);
+	printf("footer allocated = %p\n", &ft_alloc);
+}
