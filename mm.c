@@ -218,23 +218,79 @@ void *mm_realloc(void *ptr, size_t size)
     void *newptr;
     size_t copySize;
 	size_t old_size;
-	size_t asize;
+	size_t asize, next_size;
     
-	if(size == 0){
-		mm_free(ptr);
-		return NULL;
-	}
+
 	if(ptr == NULL){
 		return mm_malloc(size);
 	}
 
-
-	old_size = GET_SIZE(ptr);
-	asize = size + old_size;
-	if(asize <= old_size){
-		return ptr;
+	if(size == 0){
+		mm_free(ptr);
+		return NULL;
 	}
+	
 
+	old_size = GET_SIZE(HDRP(oldptr));
+	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+	asize = old_size - size;
+	//if(asize <= old_size){
+	//	return ptr;
+	//}
+
+	if(size < old_size){
+		PUT(HDRP(oldptr), PACK(size,1));
+		PUT(FTRP(oldptr), PACK(size,1));
+		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 1));
+		mm_free(NEXT_BLKP(oldptr));
+		return oldptr;
+	}
+	else{
+		if (size > old_size){
+			if((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + new_size >= size)){
+				PUT(HDRP(oldptr), PACK(size,1));
+				PUT(FTRP(oldptr), PACK(size,1));
+				
+			}
+			else if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + new_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
+				newptr = mm_malloc(size);
+				if (newptr == NULL)
+      				return NULL;
+				memcpy(newptr, oldptr, size);
+				mm_free(oldptr);
+    			return newptr;
+
+			
+			}
+			//newptr = mm_malloc(size);
+			//if (newptr == NULL)
+      		//	return NULL;
+			//memcpy(newptr, oldptr, size);
+			//mm_free(oldptr);
+    	//	return newptr;
+		}
+		//if()
+		
+
+
+
+
+	//	1. If new < old -> shrink it
+//2. If new > old and next block is free and old + next >= new, expand it
+//3. If new > old and next block is free but old + next < new, or next block is not free -> malloc another block, copy the content to the new block, free the current block
+
+
+		//copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+    	//if (size < copySize)
+      		//copySize = size;
+
+    	//memcpy(newptr, oldptr, copySize);
+    	//mm_free(oldptr);
+    	//return newptr;
+	}//if next block is free and sum is greater than new then just extend current block
+
+
+/*
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
@@ -245,4 +301,5 @@ void *mm_realloc(void *ptr, size_t size)
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
+	*/
 }
