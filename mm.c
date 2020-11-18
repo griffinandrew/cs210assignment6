@@ -218,7 +218,7 @@ void *mm_realloc(void *ptr, size_t size)
     void *newptr;
     size_t copySize;
 	size_t old_size;
-	size_t asize, next_size;
+	size_t asize, next_size, csize;
     
 
 	if(ptr == NULL){
@@ -237,30 +237,39 @@ void *mm_realloc(void *ptr, size_t size)
 	//if(asize <= old_size){
 	//	return ptr;
 	//}
+	csize = size - old_size;
 
 	if(size < old_size){
 		PUT(HDRP(oldptr), PACK(size,1));
 		PUT(FTRP(oldptr), PACK(size,1));
-		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 1));
+		old_size = GET_SIZE(HDRP(oldptr));
+		asize = old_size - size;
+		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
+		PUT(FTRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		mm_free(NEXT_BLKP(oldptr));
 		return oldptr;
 	}
 	else{
 		if (size > old_size){
-			if((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + new_size >= size)){
+			if(((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
+			&& (old_size + next_size >= size) ){
 				PUT(HDRP(oldptr), PACK(size,1));
 				PUT(FTRP(oldptr), PACK(size,1));
-				
+				old_size = GET_SIZE(HDRP(oldptr));
+				csize = size - old_size;
+				PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
+				PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
+				mm_free(NEXT_BLKP(oldptr));
+				return oldptr;
 			}
-			else if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + new_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
+			else{ //if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + next_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
 				newptr = mm_malloc(size);
 				if (newptr == NULL)
       				return NULL;
+				//old_size = GET_SIZE(HDRP(oldptr));
 				memcpy(newptr, oldptr, size);
 				mm_free(oldptr);
     			return newptr;
-
-			
 			}
 			//newptr = mm_malloc(size);
 			//if (newptr == NULL)
@@ -272,7 +281,7 @@ void *mm_realloc(void *ptr, size_t size)
 		//if()
 		
 
-
+	}
 
 
 	//	1. If new < old -> shrink it
@@ -287,7 +296,7 @@ void *mm_realloc(void *ptr, size_t size)
     	//memcpy(newptr, oldptr, copySize);
     	//mm_free(oldptr);
     	//return newptr;
-	}//if next block is free and sum is greater than new then just extend current block
+	//if next block is free and sum is greater than new then just extend current block
 
 
 /*
