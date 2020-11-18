@@ -266,7 +266,7 @@ void *mm_realloc(void *ptr, size_t size)
 				newptr = mm_malloc(size);
 				if (newptr == NULL)
       				return NULL;
-				old_size = GET_SIZE(HDRP(oldptr));
+				old_size = GET_SIZE(HDRP(ptr)) -DSIZE;
 				if(size < old_size)
 				{
 					size = old_size;
@@ -286,7 +286,7 @@ void *mm_realloc(void *ptr, size_t size)
 		
 
 	}
-
+*/
 
 	//1. If new < old -> shrink it
 	//2. If new > old and next block is free and old + next >= new, expand it
@@ -303,12 +303,13 @@ void *mm_realloc(void *ptr, size_t size)
 	//if next block is free and sum is greater than new then just extend current block
 
 
-*/
+
+
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
 
-    copySize = GET_SIZE(HDRP(oldptr));
+    copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
     if (size < copySize)
       copySize = size;
     memcpy(newptr, oldptr, copySize);
