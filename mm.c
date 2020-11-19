@@ -190,19 +190,19 @@ void *mm_malloc(size_t size)
 	return bp;
 }
 
-static void *find_fit(size_t asize){ //this is first fit 
+static void *find_fit(size_t asize){ 
     void *bp;
 	void *best;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is best fit 
 		if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
-			if((GET_SIZE(HDRP(bp))) < GET_SIZE(HDRP(best))){
+			if(((GET_SIZE(HDRP(bp))) < GET_SIZE(HDRP(best))) || (!best)) {
 				best = bp;
 			}
 	}
 	if(best){
 		return best;
 	}
-	return NULL;
+	
 
 
 
@@ -216,6 +216,8 @@ static void *find_fit(size_t asize){ //this is first fit
     }
     return NULL; //not fit 
 	*/
+}
+return NULL;
 }
 
 static void place(void *bp, size_t asize)
@@ -310,7 +312,7 @@ void *mm_realloc(void *ptr, size_t size)
 		
 
 	}
-*/
+
 
 	//1. If new < old -> shrink it
 	//2. If new > old and next block is free and old + next >= new, expand it
@@ -343,7 +345,7 @@ void *mm_realloc(void *ptr, size_t size)
 }
 
 
-int mm_check(void){
+/*int mm_check(void){
 	char *bp, *p, *cp;
 	void *heap_begin = mem_heap_lo();
 	void *heap_end = mem_heap_hi();
@@ -395,3 +397,4 @@ static void show_block(void *bp){
 	printf("header aloocated = %p\n", &hd_alloc);
 	printf("footer allocated = %p\n", &ft_alloc);
 }
+*/
