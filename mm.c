@@ -192,7 +192,7 @@ void *mm_malloc(size_t size)
 
 static void *find_fit(size_t asize){ 
     void *bp;
-	void *best;
+	void *best = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is best fit 
 		if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
 			if(((GET_SIZE(HDRP(bp))) < GET_SIZE(HDRP(best))) || (!best)) {
@@ -274,7 +274,7 @@ void *mm_realloc(void *ptr, size_t size)
 		mm_free(NEXT_BLKP(oldptr));
 		return NEXT_BLKP(oldptr);
 	}
-
+/*
 	else{
 		//if (size > old_size){
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
@@ -328,9 +328,9 @@ void *mm_realloc(void *ptr, size_t size)
     	//return newptr;
 	//if next block is free and sum is greater than new then just extend current block
 
+*/
 
-
-
+else{
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
@@ -342,36 +342,28 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 	
+	}
 }
 
 
-/*int mm_check(void){
-	char *bp, *p, *cp;
+
+/*
+int mm_check(void){
+	void *bp, *p, *cp;
 	void *heap_begin = mem_heap_lo();
 	void *heap_end = mem_heap_hi();
 	for(bp = heap_begin; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
 		check_blk(bp);
 		//show_block(bp);
-		if(&bp < (size_t)heap_begin || &bp > (size_t)heap_end){
+		if(*bp < (size_t)heap_begin || *bp > (size_t)heap_end){
 			printf("Error pointer is out of bounds %p\n",bp);
 		}
 		if(GET_ALLOC(bp) == 0 && GET_ALLOC(NEXT_BLKP(bp)) == 0){
 		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP(bp));
 		}
-		//if(GET_ALLOC(bp) == 0){
-		//	for (cp = free_listp; ; cp = NEXT_BLKP(cp)){
-		//		if(HDRP(bp) == HDRP(cp)){
-		//			printf("in free list");
-		//		}
-		//	}
-			//printf("not in free list");
-		//}
+
 	}
-	//for (p = free_listp; ; p = NEXT_BLKP(p)){
-	//	if(GET_ALLOC(HDRP(p)) != 0){
-	//		printf("error not free block");
-	//	}
-	//}
+
 }
 
 void check_blk(void *bp){
