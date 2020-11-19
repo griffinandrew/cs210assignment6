@@ -164,6 +164,8 @@ void *mm_malloc(size_t size)
 	size_t extendsize;	/* Amount to extend heap if no fit */ 
 	char *bp;
 
+//	mm_check();
+
 	/* Ignore spurious requests */ 
 	if(size == 0)
 		return NULL;
@@ -190,12 +192,30 @@ void *mm_malloc(size_t size)
 
 static void *find_fit(size_t asize){ //this is first fit 
     void *bp;
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
+	void *best;
+	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is best fit 
+		if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
+			if((GET_SIZE(HDRP(bp))) < GET_SIZE(HDRP(best))){
+				best = bp;
+			}
+	}
+	if(best){
+		return best;
+	}
+	return NULL;
+
+
+
+
+
+
+    /*for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
         }
     }
     return NULL; //not fit 
+	*/
 }
 
 static void place(void *bp, size_t asize)
@@ -220,7 +240,7 @@ void *mm_realloc(void *ptr, size_t size)
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
-	size_t old_size;
+	size_t old_size; //size is payload and header and footer
 	size_t asize, next_size, csize;
     
 
@@ -233,14 +253,14 @@ void *mm_realloc(void *ptr, size_t size)
 		return NULL;
 	}
 	
-/*
+
 	old_size = GET_SIZE(HDRP(oldptr));
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-	asize = old_size - size;
+	//asize = old_size - size;
 	//if(asize <= old_size){
 	//	return ptr;
 	//}
-	csize = size - old_size;
+	//csize = size - old_size;
 
 	if(size < old_size){
 		PUT(HDRP(oldptr), PACK(size,1));
@@ -250,8 +270,9 @@ void *mm_realloc(void *ptr, size_t size)
 		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		PUT(FTRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		mm_free(NEXT_BLKP(oldptr));
-		return oldptr;
+		return NEXT_BLKP(oldptr);
 	}
+
 	else{
 		//if (size > old_size){
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
