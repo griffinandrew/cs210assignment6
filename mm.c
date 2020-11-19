@@ -77,9 +77,9 @@ static void *coalesce(void *bp);
 void *mm_malloc(size_t size);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
-int mm_check(void);
-void check_blk(void *bp);
-static void show_block(void *bp);
+//int mm_check(void);
+//void check_blk(void *bp);
+//static void show_block(void *bp);
 
 int mm_init(void)
 {
@@ -195,13 +195,27 @@ static void *find_fit(size_t asize){
 	void *best = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is best fit 
 		if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
-			if(((GET_SIZE(HDRP(bp))) < GET_SIZE(HDRP(best))) || (!best)) {
+			if(best == NULL){
 				best = bp;
+				if(asize == GET_SIZE(HDRP(best))){
+					return best;
+				}
 			}
+			if((best != NULL) && (GET_SIZE(HDRP(bp))) > GET_SIZE(HDRP(best))){
+				best = bp;
+				if(asize == GET_SIZE(HDRP(best))){
+					return best;
+				}
+			}
+
+		}
 	}
-	if(best){
+	if(best!=NULL){
 		return best;
 	}
+
+
+
 	
 
 
@@ -216,7 +230,7 @@ static void *find_fit(size_t asize){
     }
     return NULL; //not fit 
 	*/
-}
+
 return NULL;
 }
 
