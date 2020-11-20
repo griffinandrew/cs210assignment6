@@ -71,7 +71,7 @@ team_t team = {
 
 void *heap_listp;
 //void *next_in_heap; // = heap_listp; //used for next fir
-int count = 0; //for next fit
+//int count = 0; //for next fit
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -326,8 +326,8 @@ void *mm_realloc(void *ptr, size_t size)
 	}
 	
 
-	old_size = GET_SIZE(HDRP(oldptr));
-	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+	//old_size = GET_SIZE(HDRP(oldptr));
+	//next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 	//asize = old_size - size;
 	//if(asize <= old_size){
 	//	return ptr;
