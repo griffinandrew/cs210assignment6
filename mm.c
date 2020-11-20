@@ -195,7 +195,7 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ 
-/*void *bp;
+void *bp;
 for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
@@ -204,7 +204,7 @@ for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is fir
     return NULL; //not fit 
 
 }
-*/
+
 /*
 void *bp;
 int counter;
@@ -223,6 +223,7 @@ for (bp = next_in_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is n
 	return NULL;
 }
 */
+/*
 void *bp;
 void *worst = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is worst fit 
@@ -247,9 +248,9 @@ void *worst = NULL;
 	}
 	return NULL;
 }
-
-
- /*   void *bp;
+*/
+/*
+    void *bp;
 	void *best = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is best fit 
 		if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
@@ -271,11 +272,12 @@ void *worst = NULL;
 	if(best!=NULL){
 		return best;
 	}
-*/
+return NULL;
+}
 
 
 	
-
+*/
 
 
     /*for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
