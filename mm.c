@@ -80,9 +80,10 @@ static void *coalesce(void *bp);
 void *mm_malloc(size_t size);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
-//int mm_check(void);
-//void check_blk(void *bp);
-//static void show_block(void *bp);
+int mm_check(void);
+int check_blk(void *bp);
+void show_block(void *bp);
+int heap_check(void *bp);
 
 int mm_init(void)
 {
@@ -167,7 +168,7 @@ void *mm_malloc(size_t size)
 	size_t extendsize;	/* Amount to extend heap if no fit */ 
 	char *bp;
 
-//	mm_check();
+	mm_check();
 
 	/* Ignore spurious requests */ 
 	if(size == 0)
@@ -344,8 +345,8 @@ void *mm_realloc(void *ptr, size_t size)
 		mm_free(NEXT_BLKP(oldptr));
 		return NEXT_BLKP(oldptr);
 	}
-	*/
-/*
+	
+
 	else{
 		//if (size > old_size){
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
@@ -364,10 +365,10 @@ void *mm_realloc(void *ptr, size_t size)
 				if (newptr == NULL)
       				return NULL;
 				old_size = GET_SIZE(HDRP(ptr)) -DSIZE;
-				if(size < old_size)
-				{
-					size = old_size;
-				}
+				//if(size < old_size)
+				//{
+				//	old_size = size;
+				//}
 				memcpy(newptr, oldptr, old_size); //-DSIZE
 				mm_free(oldptr);
     			return newptr;
@@ -399,8 +400,8 @@ void *mm_realloc(void *ptr, size_t size)
     	//return newptr;
 	//if next block is free and sum is greater than new then just extend current block
 
-*/
 
+*/
 //else{
     newptr = mm_malloc(size);
     if (newptr == NULL)
@@ -414,50 +415,68 @@ void *mm_realloc(void *ptr, size_t size)
     return newptr;
 	
 //	}
+
 }
 
 
 
-/*
+
 int mm_check(void){
 	void *bp, *p, *cp;
 	void *heap_begin = mem_heap_lo();
 	void *heap_end = mem_heap_hi();
-	for(bp = heap_begin; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
-		check_blk(bp);
-		//show_block(bp);
-		if(*bp < (size_t)heap_begin || *bp > (size_t)heap_end){
-			printf("Error pointer is out of bounds %p\n",bp);
+	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
+		
+		if (check_blk(bp) != 0){
+			printf("error in block\n");
+			return -1;
 		}
-		if(GET_ALLOC(bp) == 0 && GET_ALLOC(NEXT_BLKP(bp)) == 0){
-		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP(bp));
+		
+		//if(HDRP(bp) < (size_t)heap_begin || FTRP(bp) > (size_t)heap_end){
+		//	printf("Error pointer is out of bounds %p\n",bp);
+		//	return -1;
+		//}
+		if(heap_check(bp) != 0){
+			printf("error in heap\n");
+			return -1;
 		}
 
 	}
 
 }
 
-void check_blk(void *bp){
+
+
+int check_blk(void *bp){
 	//first check alignment 
-	if((int)bp % DSIZE == 0){
-		printf("error not aligned");
+	if((int)bp % DSIZE){
+		printf("error not aligned\n");
+		return -1;
 	}
 	if(GET(FTRP(bp)) != GET(HDRP(bp))){
-		printf("error header and footer do not match");
+		printf("error header and footer do not match\n");
+		show_block(bp);
+		return -1;
 	}
+	if (GET_ALLOC(HDRP(bp)) != GET_ALLOC(FTRP(bp))){
+		printf("error header and footer alloc status is different\n");
+		return -1;
+	}
+	return 0;
 }
 
-static void show_block(void *bp){
-	
-	size_t hd_size = GET_SIZE(HDRP(bp));
-	size_t ft_size = GET_SIZE(FTRP(bp));
-
-	unsigned int hd_alloc = GET_ALLOC(HDRP(bp));
-	unsigned int ft_alloc = GET_ALLOC(FTRP(bp));
-
-	printf("header = %p\n", &hd_size);
-	printf("footer = %p\n", &ft_size);
-	printf("header aloocated = %p\n", &hd_alloc);
-	printf("footer allocated = %p\n", &ft_alloc);
+void show_block(void *bp){
+	printf("header = %u\n", GET_SIZE(HDRP(bp)));
+	printf("footer = %u\n", GET_SIZE(FTRP(bp)));
+	printf("header aloocated = %u\n", GET_ALLOC(HDRP(bp)));
+	printf("footer allocated = %u\n", GET_ALLOC(FTRP(bp)));
 }
-*/
+
+
+int heap_check(void *bp){
+	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
+		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
+		return -1;
+	}
+	return 0;
+}
