@@ -45,7 +45,7 @@ team_t team = {
 /* Basic constants and macros */ 
 #define	WSIZE	4 /* Word and header/footer size (bytes) */ 
 #define DSIZE	8 /* Double word size (bytes) */ 
-#define CHUNKSIZE (1<<8) /* Extend heap by this amount (bytes) */ //6 with best gives 56 gives higher score //8 with best gives 57
+#define CHUNKSIZE (1<<6) /* Extend heap by this amount (bytes) */ //6 with best gives 56 gives higher score //8 with best gives 57
 //changing chunk size increases utility
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
@@ -195,7 +195,7 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ 
-void *bp;
+/*void *bp;
 for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
@@ -204,6 +204,7 @@ for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is fir
     return NULL; //not fit 
 
 }
+*/
 /*
 void *bp;
 int counter;
@@ -222,7 +223,8 @@ for (bp = next_in_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is n
 	return NULL;
 }
 */
-/*void *worst = NULL;
+void *bp;
+void *worst = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is worst fit 
 		if(!GET_ALLOC(HDRP(bp)) && (GET_SIZE(HDRP(bp))) >= asize){
 			if(worst == NULL){
@@ -243,7 +245,9 @@ for (bp = next_in_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is n
 	if(worst!=NULL){
 		return worst;
 	}
-*/
+	return NULL;
+}
+
 
  /*   void *bp;
 	void *best = NULL;
