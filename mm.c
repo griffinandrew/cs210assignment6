@@ -45,7 +45,7 @@ team_t team = {
 /* Basic constants and macros */ 
 #define	WSIZE	4 /* Word and header/footer size (bytes) */ 
 #define DSIZE	8 /* Double word size (bytes) */ 
-#define CHUNKSIZE (1<<6) /* Extend heap by this amount (bytes) */ //6 gives higher score
+#define CHUNKSIZE (1<<8) /* Extend heap by this amount (bytes) */ //6 with best gives 56 gives higher score //8 with best gives 57
 //changing chunk size increases utility
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
@@ -70,7 +70,8 @@ team_t team = {
 #define PREV_BLKP(bp)	((char *) (bp) - GET_SIZE(((char *) (bp) - DSIZE)))
 
 void *heap_listp;
-void *next_in_heap; //used for next fir
+//void *next_in_heap; // = heap_listp; //used for next fir
+int count = 0; //for next fit
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -180,6 +181,7 @@ void *mm_malloc(size_t size)
 
 	/* Search the free list for a fit */ 
 	if((bp = find_fit(asize)) != NULL) {
+		//count++;
 		place (bp, asize); 
 		return bp;
 	}
@@ -193,11 +195,23 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ 
-
 void *bp;
-
 for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
+            return bp;
+        }
+    }
+    return NULL; //not fit 
+
+}
+/*
+void *bp;
+int counter;
+void *next_in_heap = heap_listp +count;
+for (bp = next_in_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is next
+	counter++;
+        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
+			next_in_heap = heap_listp + counter;
             return bp;
         }
     }
@@ -205,9 +219,9 @@ for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is fir
 
 
 
-
-
-
+	return NULL;
+}
+*/
 /*void *worst = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is worst fit 
 		if(!GET_ALLOC(HDRP(bp)) && (GET_SIZE(HDRP(bp))) >= asize){
@@ -268,8 +282,7 @@ for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is fir
     return NULL; //not fit 
 	*/
 
-return NULL;
-}
+
 
 static void place(void *bp, size_t asize)
 {
