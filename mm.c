@@ -85,6 +85,10 @@ int check_blk(void *bp);
 void show_block(void *bp);
 int heap_check(void *bp);
 
+
+//the role of this function is to intialize the heap
+//first the function creeates an a block of given size then sets the attributes accordingly
+//here a block of d size is intialized and allocated
 int mm_init(void)
 {
 	/* Create the initial empty heap */ 
@@ -102,6 +106,10 @@ int mm_init(void)
 	return 0;
 }
 
+
+//this function is used to extend the heap with an additional free block 
+//it first ensures that the size is aligned properly then intializes a free block of that size
+//if the previous block is also free these blocks will need to be coalesced
 static void *extend_heap(size_t words)
 {
 	char *bp; 
@@ -121,6 +129,7 @@ static void *extend_heap(size_t words)
 	return coalesce(bp);
 }
 
+//this function simply frees an allocated block from the heap and coalesces it if that is appropriate
 void mm_free(void *bp)
 {
 	size_t size = GET_SIZE(HDRP(bp));
@@ -130,6 +139,9 @@ void mm_free(void *bp)
 	coalesce(bp);
 }
 
+
+//this function is used to ensure that no adjacent blocks are free there are 4 cases as seen below 
+//if appropraite the new size of the coalsesced block is calcuated, formed and returned to with the proper pointer
 static void *coalesce(void *bp)
 {
 	size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))); 
@@ -162,6 +174,9 @@ static void *coalesce(void *bp)
 	return bp;
 }
 
+//this fucntion is used to intially allocate space for a block of said size
+//it ensures the size is proper and aligned, finds an approate size free block for the request if found places that block as allocated 
+//if not found a new free block must be created, then place the request on that block
 void *mm_malloc(size_t size)
 {
 	size_t asize;		/* Adjusted block size */ 
@@ -196,6 +211,9 @@ void *mm_malloc(size_t size)
 	return bp;
 }
 
+
+//the role of this function is to get an appropraite size block tht can be allocated\
+//the function returns that block if it can be or returns null if no fit was found
 static void *find_fit(size_t asize){ 
 void *bp;
 for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
@@ -291,7 +309,9 @@ return NULL;
 	*/
 
 
-
+//this function has 2 different cases one for when the request is larger then the intialized block size 
+//the space must be split it places the correct size block as allocated and the rest as not
+//if splitting is not required the block is just allocated 
 static void place(void *bp, size_t asize)
 {
 	size_t csize = GET_SIZE(HDRP(bp));
@@ -309,6 +329,8 @@ static void place(void *bp, size_t asize)
     }
 }
 
+//this function resizes the block to a given size
+//at the moment it copies the appraite size into a newly allocated block and frees the old block
 void *mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
@@ -421,22 +443,18 @@ void *mm_realloc(void *ptr, size_t size)
 
 
 
-
+//the role of this function is to check both the heap and the block for any errors
+//it traveres through the heap, calls a check to block and heap for each interation and returns error message and visual of error
 int mm_check(void){
-	void *bp, *p, *cp;
-	void *heap_begin = mem_heap_lo();
-	void *heap_end = mem_heap_hi();
+	void *bp;
 	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
 		
 		if (check_blk(bp) != 0){
 			printf("error in block\n");
+			show_block(bp);
 			return -1;
 		}
 		
-		//if(HDRP(bp) < (size_t)heap_begin || FTRP(bp) > (size_t)heap_end){
-		//	printf("Error pointer is out of bounds %p\n",bp);
-		//	return -1;
-		//}
 		if(heap_check(bp) != 0){
 			printf("error in heap\n");
 			return -1;
@@ -447,7 +465,8 @@ int mm_check(void){
 }
 
 
-
+//this function makes sure there is no error in the block itself including allocation status, size differences, or an alignment error
+//it retrurn -1 and a appropraite error message for each
 int check_blk(void *bp){
 	//first check alignment 
 	if((int)bp % DSIZE){
@@ -456,7 +475,6 @@ int check_blk(void *bp){
 	}
 	if(GET(FTRP(bp)) != GET(HDRP(bp))){
 		printf("error header and footer do not match\n");
-		show_block(bp);
 		return -1;
 	}
 	if (GET_ALLOC(HDRP(bp)) != GET_ALLOC(FTRP(bp))){
@@ -466,6 +484,7 @@ int check_blk(void *bp){
 	return 0;
 }
 
+//this function is used by check when a block error occurs to show the contents of the block
 void show_block(void *bp){
 	printf("header = %u\n", GET_SIZE(HDRP(bp)));
 	printf("footer = %u\n", GET_SIZE(FTRP(bp)));
@@ -473,7 +492,8 @@ void show_block(void *bp){
 	printf("footer allocated = %u\n", GET_ALLOC(FTRP(bp)));
 }
 
-
+//this function is used by check to check different aspects of the heap such as 2 uncoalesced blocks next to eachother and if they are out of bounds
+//it returns a appropraite error message and -1 if an error has occurred here
 int heap_check(void *bp){
 	if(GET_ALLOC(PREV_BLKP(HDRP(bp))) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
 		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
