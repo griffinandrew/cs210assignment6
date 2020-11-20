@@ -168,7 +168,7 @@ void *mm_malloc(size_t size)
 	size_t extendsize;	/* Amount to extend heap if no fit */ 
 	char *bp;
 
-	mm_check();
+	//mm_check();
 
 	/* Ignore spurious requests */ 
 	if(size == 0)
@@ -192,6 +192,7 @@ void *mm_malloc(size_t size)
 	if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
 		return NULL; 
 	place (bp, asize);
+	//mm_check();
 	return bp;
 }
 
@@ -474,8 +475,12 @@ void show_block(void *bp){
 
 
 int heap_check(void *bp){
-	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
+	if(GET_ALLOC(PREV_BLKP(HDRP(bp))) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
 		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
+		return -1;
+	}
+	if(HDRP(bp) < (char*)mem_heap_lo || FTRP(bp) > (char*)mem_heap_hi){
+		printf("Error pointer is out of bounds %p\n",bp);
 		return -1;
 	}
 	return 0;
