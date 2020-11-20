@@ -45,7 +45,8 @@ team_t team = {
 /* Basic constants and macros */ 
 #define	WSIZE	4 /* Word and header/footer size (bytes) */ 
 #define DSIZE	8 /* Double word size (bytes) */ 
-#define CHUNKSIZE (1<<12) /* Extend heap by this amount (bytes) */
+#define CHUNKSIZE (1<<6) /* Extend heap by this amount (bytes) */ //6 gives higher score
+//changing chunk size increases utility
 
 #define MAX(x, y) ((x) > (y)? (x) : (y))
 
@@ -69,6 +70,7 @@ team_t team = {
 #define PREV_BLKP(bp)	((char *) (bp) - GET_SIZE(((char *) (bp) - DSIZE)))
 
 void *heap_listp;
+void *next_in_heap; //used for next fir
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -191,7 +193,45 @@ void *mm_malloc(size_t size)
 }
 
 static void *find_fit(size_t asize){ 
-    void *bp;
+
+void *bp;
+
+for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
+        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
+            return bp;
+        }
+    }
+
+
+
+
+
+
+
+/*void *worst = NULL;
+	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is worst fit 
+		if(!GET_ALLOC(HDRP(bp)) && (GET_SIZE(HDRP(bp))) >= asize){
+			if(worst == NULL){
+				worst = bp;
+				//if(asize == GET_SIZE(HDRP(best))){
+				//	return best;
+				//}
+			}
+			if((worst != NULL) && (GET_SIZE(HDRP(bp))) < GET_SIZE(HDRP(worst))){
+				worst = bp;
+				//if(asize == GET_SIZE(HDRP(best))){
+				//	return best;
+				//}
+			}
+
+		}
+	}
+	if(worst!=NULL){
+		return worst;
+	}
+*/
+
+ /*   void *bp;
 	void *best = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is best fit 
 		if(!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
@@ -213,13 +253,10 @@ static void *find_fit(size_t asize){
 	if(best!=NULL){
 		return best;
 	}
-
+*/
 
 
 	
-
-
-
 
 
 
@@ -277,7 +314,7 @@ void *mm_realloc(void *ptr, size_t size)
 	//	return ptr;
 	//}
 	//csize = size - old_size;
-
+/*
 	if(size < old_size){
 		PUT(HDRP(oldptr), PACK(size,1));
 		PUT(FTRP(oldptr), PACK(size,1));
@@ -288,6 +325,7 @@ void *mm_realloc(void *ptr, size_t size)
 		mm_free(NEXT_BLKP(oldptr));
 		return NEXT_BLKP(oldptr);
 	}
+	*/
 /*
 	else{
 		//if (size > old_size){
@@ -344,7 +382,7 @@ void *mm_realloc(void *ptr, size_t size)
 
 */
 
-else{
+//else{
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
@@ -356,7 +394,7 @@ else{
     mm_free(oldptr);
     return newptr;
 	
-	}
+//	}
 }
 
 
