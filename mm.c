@@ -207,12 +207,17 @@ void *mm_malloc(size_t size)
 	if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
 		return NULL; 
 	place (bp, asize);
-	//mm_check();
+	
+	if (mm_check() != 0){
+		printf("error");
+	}
+
+
 	return bp;
 }
 
 
-//the role of this function is to get an appropraite size block tht can be allocated\
+//the role of this function is to get an appropraite size block tht can be allocated
 //the function returns that block if it can be or returns null if no fit was found
 static void *find_fit(size_t asize){ 
 void *bp;
@@ -350,15 +355,15 @@ void *mm_realloc(void *ptr, size_t size)
 	}
 	
 
-	//old_size = GET_SIZE(HDRP(oldptr));
-	//next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-	//asize = old_size - size;
+	old_size = GET_SIZE(HDRP(oldptr));
+	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+	asize = old_size - size;
 	//if(asize <= old_size){
 	//	return ptr;
 	//}
-	//csize = size - old_size;
-/*
-	if(size < old_size){
+	csize = size - old_size;
+
+	if((csize < 0)){
 		PUT(HDRP(oldptr), PACK(size,1));
 		PUT(FTRP(oldptr), PACK(size,1));
 		old_size = GET_SIZE(HDRP(oldptr));
@@ -373,25 +378,31 @@ void *mm_realloc(void *ptr, size_t size)
 	else{
 		//if (size > old_size){
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
-			&& (old_size + next_size >= size) ){
+			&& (old_size + next_size >= size) ){ //should dsize be here for >= size
+				
+
 				PUT(HDRP(oldptr), PACK(size,1));
 				PUT(FTRP(oldptr), PACK(size,1));
+				
+				
 				old_size = GET_SIZE(HDRP(oldptr));
+				next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 				csize = size - old_size;
+
 				PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
 				PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
 				mm_free(NEXT_BLKP(oldptr));
-				return oldptr;
+				return NEXT_BLKP(oldptr);
 			}
 			else{ //if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + next_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
 				newptr = mm_malloc(size);
 				if (newptr == NULL)
       				return NULL;
-				old_size = GET_SIZE(HDRP(ptr)) -DSIZE;
-				//if(size < old_size)
-				//{
-				//	old_size = size;
-				//}
+				old_size = GET_SIZE(HDRP(ptr)) - DSIZE;
+				if(size < old_size)
+				{
+					old_size = size;
+				}
 				memcpy(newptr, oldptr, old_size); //-DSIZE
 				mm_free(oldptr);
     			return newptr;
@@ -424,7 +435,7 @@ void *mm_realloc(void *ptr, size_t size)
 	//if next block is free and sum is greater than new then just extend current block
 
 
-*/
+/*
 //else{
     newptr = mm_malloc(size);
     if (newptr == NULL)
@@ -438,7 +449,7 @@ void *mm_realloc(void *ptr, size_t size)
     return newptr;
 	
 //	}
-
+*/
 }
 
 
@@ -461,6 +472,7 @@ int mm_check(void){
 		}
 
 	}
+	return 0;
 
 }
 
@@ -470,7 +482,7 @@ int mm_check(void){
 int check_blk(void *bp){
 	//first check alignment 
 	if((int)bp % DSIZE){
-		printf("error not aligned\n");
+		printf("error block not aligned\n");
 		return -1;
 	}
 	if(GET(FTRP(bp)) != GET(HDRP(bp))){
@@ -480,6 +492,14 @@ int check_blk(void *bp){
 	if (GET_ALLOC(HDRP(bp)) != GET_ALLOC(FTRP(bp))){
 		printf("error header and footer alloc status is different\n");
 		return -1;
+	}
+	if(GET_SIZE(HDRP(bp)) % ALIGNMENT){ //header alignement 
+		printf("error header not aligned\n");
+		return -1;
+	}
+	if((GET_ALLOC(HDRP(bp)) == 1) && (GET_SIZE(HDRP(bp)) < DSIZE)) { //min size alignment
+		printf("error block is smaller than minimun size allocation\n");
+		return -1; 
 	}
 	return 0;
 }
@@ -495,12 +515,12 @@ void show_block(void *bp){
 //this function is used by check to check different aspects of the heap such as 2 uncoalesced blocks next to eachother and if they are out of bounds
 //it returns a appropraite error message and -1 if an error has occurred here
 int heap_check(void *bp){
-	if(GET_ALLOC(PREV_BLKP(HDRP(bp))) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
+	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
 		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
 		return -1;
 	}
 	if(HDRP(bp) < (char*)mem_heap_lo || FTRP(bp) > (char*)mem_heap_hi){
-		printf("Error pointer is out of bounds %p\n",bp);
+		printf("Error pointer is out of bounds %p\n", bp);
 		return -1;
 	}
 	return 0;
