@@ -70,8 +70,6 @@ team_t team = {
 #define PREV_BLKP(bp)	((char *) (bp) - GET_SIZE(((char *) (bp) - DSIZE)))
 
 void *heap_listp;
-//void *next_in_heap; // = heap_listp; //used for next fir
-//int count = 0; //for next fit
 
 int mm_init(void);
 static void *extend_heap(size_t words);
@@ -197,7 +195,6 @@ void *mm_malloc(size_t size)
 
 	/* Search the free list for a fit */ 
 	if((bp = find_fit(asize)) != NULL) {
-		//count++;
 		place (bp, asize); 
 		return bp;
 	}
@@ -208,9 +205,9 @@ void *mm_malloc(size_t size)
 		return NULL; 
 	place (bp, asize);
 	
-	if (mm_check() != 0){
-		printf("ERROR\n");
-	}
+//	if (mm_check() != 0){ //check 
+//		printf("ERROR\n");
+//	}
 
 
 	return bp;
@@ -221,9 +218,9 @@ void *mm_malloc(size_t size)
 //the function returns that block if it can be or returns null if no fit was found
 static void *find_fit(size_t asize){ 
 void *bp;
-for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
+for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit, traverse blocks in the list until a free block that fits the size requirement is found
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
-            return bp;
+            return bp; //return non-allocated block with proper size
         }
     }
     return NULL; //not fit 
@@ -321,15 +318,15 @@ static void place(void *bp, size_t asize)
 {
 	size_t csize = GET_SIZE(HDRP(bp));
 
-    if((csize - asize) >= (2*DSIZE)){
-        PUT(HDRP(bp), PACK(asize, 1));
+    if((csize - asize) >= (2*DSIZE)){ //if difference in size of block vs requested size is greater than or equal to min size split
+        PUT(HDRP(bp), PACK(asize, 1)); //allocate requested size block / header and footer
         PUT(FTRP(bp), PACK(asize, 1));
         bp = NEXT_BLKP(bp);
-        PUT(HDRP(bp), PACK(csize - asize, 0));
+        PUT(HDRP(bp), PACK(csize - asize, 0)); //the leftover space is then freed
         PUT(FTRP(bp), PACK(csize - asize, 0));
     }
     else{
-        PUT(HDRP(bp),PACK(csize, 1));
+        PUT(HDRP(bp),PACK(csize, 1)); //otherwise just place the size of the block given in the header
         PUT(FTRP(bp),PACK(csize, 1));
     }
 }
@@ -360,7 +357,7 @@ void *mm_realloc(void *ptr, size_t size)
 	}
 	
 
-	old_size = GET_SIZE(HDRP(oldptr));
+	old_size = GET_SIZE(HDRP(oldptr)); //get size of block and surroundings to be used for the cases of realloc
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 	asize = old_size - size;
 
@@ -404,7 +401,6 @@ void *mm_realloc(void *ptr, size_t size)
 		next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 		if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
 		&& (old_size + next_size >= aligned_size) ){ //case 2 new is greater than old, next block is free and next and oldsize are greater than or equal to the aligned size requested
-
 			PUT(HDRP(oldptr), PACK(old_size + next_size,1)); //expand the block using the free space from next
 			PUT(FTRP(oldptr), PACK(old_size + next_size,1));
 				
@@ -440,28 +436,24 @@ void *mm_realloc(void *ptr, size_t size)
 int mm_check(void){
 	void *bp;
 	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
-		
 		if (check_blk(bp) != 0){ //calls check_blk and sees if that returns an error if so error message is displayed so is that block with error
 			printf("error in block\n");
 			show_block(bp);
 			return -1;
 		}
-		
 		if(heap_check(bp) != 0){ //calls heap_check and sees if that returns an error if so error message is displayed
 			printf("error in heap\n");
 			return -1;
 		}
-
 	}
 	return 0; //no errors return 0
-
 }
 
 
 //this function makes sure there is no error in the block itself including allocation status, size differences, or an alignment error
 //it retrurn -1 and a appropraite error message for each
 int check_blk(void *bp){
-	//first check alignment 
+
 	if((int)bp % DSIZE){ //ensure block alignment 
 		printf("error block not aligned\n");
 		return -1;
@@ -509,7 +501,8 @@ int heap_check(void *bp){
 		return -1;
 	}
 	if(HDRP(bp) > (char*)mem_heap_hi || FTRP(bp) < (char*)mem_heap_lo){ //make sure that blocks are in the heap
-		printf("Error pointer is out of bounds %p\n", bp);
+		printf("Error pointer is out of bounds %p, %p\n", HDRP(bp), FTRP(bp));
+		printf("should be in range %p, %p\n",mem_heap_hi, mem_heap_lo);
 		return -1;
 	}
 	return 0;
