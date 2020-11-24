@@ -355,40 +355,45 @@ void *mm_realloc(void *ptr, size_t size)
 	}
 	
 
-	old_size = GET_SIZE(HDRP(oldptr)) - DSIZE;
+	old_size = GET_SIZE(HDRP(oldptr));
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 	asize = old_size - size;
 
 
-	size_t aligned_size = ALIGN(size);
+	size_t aligned_size = ALIGN(size+DSIZE);
 
-	if(asize == old_size){
+	if(aligned_size == old_size){
 		return ptr;
 	}
 	csize = size - old_size;
 
 	if(aligned_size < old_size){
-		if(old_size - aligned_size - DSIZE <= DSIZE){
+		if(old_size - aligned_size - DSIZE < DSIZE){
 			return oldptr;
 		}
-		PUT(HDRP(oldptr), PACK(aligned_size+DSIZE,1));
-		PUT(FTRP(oldptr), PACK(aligned_size+DSIZE,1));
+		PUT(HDRP(oldptr), PACK(aligned_size,1));
+		PUT(FTRP(oldptr), PACK(aligned_size,1));
 		old_size = GET_SIZE(HDRP(oldptr));
 		asize = old_size - aligned_size;
-		newptr = oldptr;
-		oldptr = NEXT_BLKP(newptr);
+		//newptr = oldptr;
+		//oldptr = NEXT_BLKP(newptr);
 
 
 		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		PUT(FTRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		mm_free(NEXT_BLKP(oldptr));
-		return NEXT_BLKP(oldptr);
+		//coalesce?
+
+		coalesce(NEXT_BLKP(oldptr));
+		return oldptr;
 	}
 	
 
 	else{
+			old_size = GET_SIZE(HDRP(oldptr));
+			next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
-			&& (old_size + next_size >= size) ){ //should dsize be here for >= size
+			&& (old_size + next_size >= aligned_size) ){ //should dsize be here for >= size
 				
 
 				PUT(HDRP(oldptr), PACK(size,1));
