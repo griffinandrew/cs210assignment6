@@ -135,7 +135,7 @@ void mm_free(void *bp)
 	size_t size = GET_SIZE(HDRP(bp));
 
 	PUT(HDRP(bp), PACK(size, 0)); 
-	PUT(FTRP(bp), PACK(size, 0)); 
+	PUT(FTRP(bp), PACK(size, 0)); //seg fault here
 	coalesce(bp);
 }
 
@@ -368,10 +368,13 @@ void *mm_realloc(void *ptr, size_t size)
 	csize = size - old_size;
 
 	if(aligned_size < old_size){
+		
+		/*
 		if(old_size - aligned_size < 4*WSIZE){ //if size is less then min size
 			return oldptr;
 		}
-		PUT(HDRP(oldptr), PACK(aligned_size,1));
+		else {
+		PUT(HDRP(oldptr), PACK(aligned_size,1)); //shrinking the size results in not preserving the data
 		PUT(FTRP(oldptr), PACK(aligned_size,1));
 		old_size = GET_SIZE(HDRP(oldptr));
 		asize = old_size - aligned_size;
@@ -385,7 +388,9 @@ void *mm_realloc(void *ptr, size_t size)
 		//coalesce?
 
 		coalesce(NEXT_BLKP(oldptr));
+		*/
 		return oldptr;
+	
 	}
 	
 
@@ -394,19 +399,20 @@ void *mm_realloc(void *ptr, size_t size)
 			next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
 			&& (old_size + next_size >= aligned_size) ){ //should dsize be here for >= size
-				
-				place(NEXT_BLKP(oldptr), aligned_size - old_size);
-				PUT(HDRP(oldptr), PACK(old_size + next_size,1));
-				PUT(FTRP(oldptr), PACK(old_size,1));
-				
-				
-				old_size = GET_SIZE(HDRP(oldptr));
-				next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-				csize = size - old_size;
 
-				PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
-				PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
-				mm_free(NEXT_BLKP(oldptr));
+
+				//place(NEXT_BLKP(oldptr), aligned_size - old_size);
+				PUT(HDRP(oldptr), PACK(old_size + next_size,1));
+				PUT(FTRP(oldptr), PACK(old_size + next_size,1));
+				
+				
+				//old_size = GET_SIZE(HDRP(oldptr));
+				//next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+				//csize = size - old_size;
+
+				//PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0)); //adjusting here leads to payload error
+				//PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
+				//mm_free(NEXT_BLKP(oldptr));
 				return oldptr;
 			}
 			else{ //if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + next_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
