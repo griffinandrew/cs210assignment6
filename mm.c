@@ -360,7 +360,7 @@ void *mm_realloc(void *ptr, size_t size)
 	asize = old_size - size;
 
 
-	aligned_size = ALIGN(size);
+	size_t aligned_size = ALIGN(size);
 
 	if(asize == old_size){
 		return ptr;
