@@ -132,11 +132,11 @@ static void *extend_heap(size_t words)
 //this function simply frees an allocated block from the heap and coalesces it if that is appropriate
 void mm_free(void *bp)
 {
-	size_t size = GET_SIZE(HDRP(bp));
+	size_t size = GET_SIZE(HDRP(bp)); //get size of current pointer
 
-	PUT(HDRP(bp), PACK(size, 0)); 
-	PUT(FTRP(bp), PACK(size, 0)); //seg fault here
-	coalesce(bp);
+	PUT(HDRP(bp), PACK(size, 0)); //set allocation of header and footer to 0 to free it
+	PUT(FTRP(bp), PACK(size, 0)); 
+	coalesce(bp); //coalesce the newly freed block
 }
 
 
@@ -148,17 +148,17 @@ static void *coalesce(void *bp)
 	size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp))); 
 	size_t size = GET_SIZE(HDRP(bp));
 
-	if(prev_alloc && next_alloc) {			/* Case 1 */
+	if(prev_alloc && next_alloc) {			/* Case 1 */ //if they are both allocated no coalescing to be done
 		return bp;
 	}
 
-	else if (prev_alloc && ! next_alloc) {		/* Case 2 */
+	else if (prev_alloc && !next_alloc) {		/* Case 2 */ //if prev is allocated but next is free expand block to take up next space
 		size += GET_SIZE(HDRP(NEXT_BLKP(bp))); 
 		PUT(HDRP(bp), PACK(size, 0)); 
 		PUT(FTRP(bp), PACK(size, 0));
 	}
 
-	else if (!prev_alloc && next_alloc) {		/* Case 3 */
+	else if (!prev_alloc && next_alloc) {		/* Case 3 */ //if prev is not allocated but next is expand block to take up prev space
 		size += GET_SIZE(HDRP(PREV_BLKP(bp))); 
 		PUT(FTRP(bp), PACK(size, 0)); 
 		PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0)); 
@@ -166,7 +166,7 @@ static void *coalesce(void *bp)
 	}
 
 	else {						/* Case 4 */ 
-		size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp))); 
+		size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(FTRP(NEXT_BLKP(bp))); //if both are not allocated expand free block to occupy both spots
 		PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0)); 
 		PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
 		bp = PREV_BLKP(bp); 
@@ -208,9 +208,9 @@ void *mm_malloc(size_t size)
 		return NULL; 
 	place (bp, asize);
 	
-//	if (mm_check() != 0){
-//		printf("error");
-//	}
+	if (mm_check() != 0){
+		printf("ERROR\n");
+	}
 
 
 	return bp;
@@ -335,7 +335,12 @@ static void place(void *bp, size_t asize)
 }
 
 //this function resizes the block to a given size
-//at the moment it copies the appraite size into a newly allocated block and frees the old block
+//there are three basic cases relating to the size when we call realloc
+	//1. If new < old -> shrink it
+	//2. If new > old and next block is free and old + next >= new, expand it
+	//3. If new > old and next block is free but old + next < new, or next block is not free -> malloc another block, copy the content to the new block, free the current block
+//each of these is dealt with appropraitely based on what the size asked for is, either shrinking, expanding or allocating another if necessary
+//shirnking is commented out due to shrinking the block not being able to maintain the payload which resulted in error
 void *mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
@@ -346,10 +351,10 @@ void *mm_realloc(void *ptr, size_t size)
     
 
 	if(ptr == NULL){
-		return mm_malloc(size);
+		return mm_malloc(size); //if no location of block to be reallocated is given just allocate space for it
 	}
 
-	if(size == 0){
+	if(size == 0){ //if size asked for is 0 just free that space and return null
 		mm_free(ptr);
 		return NULL;
 	}
@@ -362,12 +367,12 @@ void *mm_realloc(void *ptr, size_t size)
 
 	size_t aligned_size = ALIGN(size+DSIZE);
 
-	if(aligned_size == old_size){
+	if(aligned_size == old_size){ //if the aligned size of the request is equal to the old size same block is used just return
 		return ptr;
 	}
 	csize = size - old_size;
 
-	if(aligned_size < old_size){
+	if(aligned_size < old_size){ //case 1 new is less than old and must be shrunk
 		
 		/*
 		if(old_size - aligned_size < 4*WSIZE){ //if size is less then min size
@@ -395,83 +400,37 @@ void *mm_realloc(void *ptr, size_t size)
 	
 
 	else{
-			old_size = GET_SIZE(HDRP(oldptr));
-			next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
-			&& (old_size + next_size >= aligned_size) ){ //should dsize be here for >= size
+		old_size = GET_SIZE(HDRP(oldptr));
+		next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+		if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
+		&& (old_size + next_size >= aligned_size) ){ //case 2 new is greater than old, next block is free and next and oldsize are greater than or equal to the aligned size requested
 
-
-				//place(NEXT_BLKP(oldptr), aligned_size - old_size);
-				PUT(HDRP(oldptr), PACK(old_size + next_size,1));
-				PUT(FTRP(oldptr), PACK(old_size + next_size,1));
+			PUT(HDRP(oldptr), PACK(old_size + next_size,1)); //expand the block using the free space from next
+			PUT(FTRP(oldptr), PACK(old_size + next_size,1));
 				
-				
-				//old_size = GET_SIZE(HDRP(oldptr));
-				//next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-				//csize = size - old_size;
+			//old_size = GET_SIZE(HDRP(oldptr));
+			//next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+			//csize = size - old_size;
 
-				//PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0)); //adjusting here leads to payload error
-				//PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
-				//mm_free(NEXT_BLKP(oldptr));
-				return oldptr;
+			//PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0)); //adjusting here leads to payload error
+			//PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
+			//mm_free(NEXT_BLKP(oldptr));
+			return oldptr;
+		}
+		else{ //if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + next_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
+			newptr = mm_malloc(size);  //case 3 new is greater than old, next is free and old + next is less than aligned size or the next block is allocated
+			if (newptr == NULL) //allocate memory for the block, then check to make sure malloc did not fail
+      			return NULL;
+			old_size = GET_SIZE(HDRP(ptr)) -DSIZE; //get the size of payload, thus subtract header and footer size
+			if(size < old_size) 
+			{
+				old_size = size;
 			}
-			else{ //if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + next_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
-				newptr = mm_malloc(size);
-				if (newptr == NULL)
-      				return NULL;
-				old_size = GET_SIZE(HDRP(ptr)) -DSIZE; //-DsIZE;
-				if(size < old_size)
-				{
-					old_size = size;
-				}
-				memcpy(newptr, oldptr, old_size); //-DSIZE
-				mm_free(oldptr);
-    			return newptr;
+			memcpy(newptr, oldptr, old_size); //copy payload into newly allocated block
+			mm_free(oldptr); //free old
+    		return newptr;
 			}
-			//newptr = mm_malloc(size);
-			//if (newptr == NULL)
-      		//	return NULL;
-			//memcpy(newptr, oldptr, size);
-			//mm_free(oldptr);
-    	//	return newptr;
-		//}
-		//if()
-		
-
-	}
-
-
-	//1. If new < old -> shrink it
-	//2. If new > old and next block is free and old + next >= new, expand it
-	//3. If new > old and next block is free but old + next < new, or next block is not free -> malloc another block, copy the content to the new block, free the current block
-
-
-		//copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    	//if (size < copySize)
-      		//copySize = size;
-
-    	//memcpy(newptr, oldptr, copySize);
-    	//mm_free(oldptr);
-    	//return newptr;
-	//if next block is free and sum is greater than new then just extend current block
-
-/*
-
-//else{
-
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
-
-    copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
-	
-//	}
-*/
+		}
 }
 
 
@@ -482,19 +441,19 @@ int mm_check(void){
 	void *bp;
 	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){
 		
-		if (check_blk(bp) != 0){
+		if (check_blk(bp) != 0){ //calls check_blk and sees if that returns an error if so error message is displayed so is that block with error
 			printf("error in block\n");
 			show_block(bp);
 			return -1;
 		}
 		
-		if(heap_check(bp) != 0){
+		if(heap_check(bp) != 0){ //calls heap_check and sees if that returns an error if so error message is displayed
 			printf("error in heap\n");
 			return -1;
 		}
 
 	}
-	return 0;
+	return 0; //no errors return 0
 
 }
 
@@ -503,23 +462,27 @@ int mm_check(void){
 //it retrurn -1 and a appropraite error message for each
 int check_blk(void *bp){
 	//first check alignment 
-	if((int)bp % DSIZE){
+	if((int)bp % DSIZE){ //ensure block alignment 
 		printf("error block not aligned\n");
 		return -1;
 	}
-	if(GET(FTRP(bp)) != GET(HDRP(bp))){
+	if(GET(FTRP(bp)) != GET(HDRP(bp))){ //ensure header and footer are matching
 		printf("error header and footer do not match\n");
 		return -1;
 	}
-	if (GET_ALLOC(HDRP(bp)) != GET_ALLOC(FTRP(bp))){
+	if (GET_ALLOC(HDRP(bp)) != GET_ALLOC(FTRP(bp))){ //ensure that header and footer have matching allocation status
 		printf("error header and footer alloc status is different\n");
 		return -1;
 	}
-	if(GET_SIZE(HDRP(bp)) % ALIGNMENT){ //header alignement 
+	if(GET_SIZE(HDRP(bp)) % ALIGNMENT){ //check header alignement 
 		printf("error header not aligned\n");
 		return -1;
 	}
-	if((GET_ALLOC(HDRP(bp)) == 1) && (GET_SIZE(HDRP(bp)) < DSIZE)) { //min size alignment
+	if(GET_SIZE(FTRP(bp)) % ALIGNMENT){ //check footer alignement 
+		printf("error footer not aligned\n");
+		return -1;
+	}
+	if((GET_ALLOC(HDRP(bp)) == 1) && (GET_SIZE(HDRP(bp)) < DSIZE)) { //check min size alignment
 		printf("error block is smaller than minimun size allocation\n");
 		return -1; 
 	}
@@ -528,20 +491,24 @@ int check_blk(void *bp){
 
 //this function is used by check when a block error occurs to show the contents of the block
 void show_block(void *bp){
-	printf("header = %u\n", GET_SIZE(HDRP(bp)));
+	printf("header = %u\n", GET_SIZE(HDRP(bp))); //show header and footer of block
 	printf("footer = %u\n", GET_SIZE(FTRP(bp)));
-	printf("header aloocated = %u\n", GET_ALLOC(HDRP(bp)));
+	printf("header aloocated = %u\n", GET_ALLOC(HDRP(bp))); //show allocation status of block
 	printf("footer allocated = %u\n", GET_ALLOC(FTRP(bp)));
 }
 
 //this function is used by check to check different aspects of the heap such as 2 uncoalesced blocks next to eachother and if they are out of bounds
 //it returns a appropraite error message and -1 if an error has occurred here
 int heap_check(void *bp){
-	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){
-		printf("Error uncoalesced blocks %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
+	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){ //ensure that current block and next is not free
+		printf("Error uncoalesced blocks current and next %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
 		return -1;
 	}
-	if(HDRP(bp) < (char*)mem_heap_lo || FTRP(bp) > (char*)mem_heap_hi){
+	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(PREV_BLKP(HDRP(bp))) == 0){ //ensure that no current block and prev is not free
+		printf("Error uncoalesced blocks current and prev %p, %p \n", bp, PREV_BLKP((HDRP(bp))));
+		return -1;
+	}
+	if(HDRP(bp) > (char*)mem_heap_hi || FTRP(bp) < (char*)mem_heap_lo){ //make sure that blocks are in the heap
 		printf("Error pointer is out of bounds %p\n", bp);
 		return -1;
 	}
