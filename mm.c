@@ -208,9 +208,9 @@ void *mm_malloc(size_t size)
 		return NULL; 
 	place (bp, asize);
 	
-	if (mm_check() != 0){
-		printf("error");
-	}
+//	if (mm_check() != 0){
+//		printf("error");
+//	}
 
 
 	return bp;
@@ -354,7 +354,7 @@ void *mm_realloc(void *ptr, size_t size)
 		return NULL;
 	}
 	
-
+/*
 	old_size = GET_SIZE(HDRP(oldptr));
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 	asize = old_size - size;
@@ -376,7 +376,6 @@ void *mm_realloc(void *ptr, size_t size)
 	
 
 	else{
-		//if (size > old_size){
 			if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
 			&& (old_size + next_size >= size) ){ //should dsize be here for >= size
 				
@@ -434,9 +433,10 @@ void *mm_realloc(void *ptr, size_t size)
     	//return newptr;
 	//if next block is free and sum is greater than new then just extend current block
 
+*/
 
-/*
 //else{
+
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
@@ -449,7 +449,7 @@ void *mm_realloc(void *ptr, size_t size)
     return newptr;
 	
 //	}
-*/
+
 }
 
 
