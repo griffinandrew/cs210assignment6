@@ -354,20 +354,31 @@ void *mm_realloc(void *ptr, size_t size)
 		return NULL;
 	}
 	
-/*
-	old_size = GET_SIZE(HDRP(oldptr));
+
+	old_size = GET_SIZE(HDRP(oldptr)) - DSIZE;
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
 	asize = old_size - size;
-	//if(asize <= old_size){
-	//	return ptr;
-	//}
+
+
+	aligned_size = ALIGN(size);
+
+	if(asize == old_size){
+		return ptr;
+	}
 	csize = size - old_size;
 
-	if((csize < 0)){
-		PUT(HDRP(oldptr), PACK(size,1));
-		PUT(FTRP(oldptr), PACK(size,1));
+	if(aligned_size < old_size){
+		if(old_size - aligned_size - DSIZE <= DSIZE){
+			return oldptr;
+		}
+		PUT(HDRP(oldptr), PACK(aligned_size+DSIZE,1));
+		PUT(FTRP(oldptr), PACK(aligned_size+DSIZE,1));
 		old_size = GET_SIZE(HDRP(oldptr));
-		asize = old_size - size;
+		asize = old_size - aligned_size;
+		newptr = oldptr;
+		oldptr = NEXT_BLKP(newptr);
+
+
 		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		PUT(FTRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		mm_free(NEXT_BLKP(oldptr));
@@ -433,7 +444,7 @@ void *mm_realloc(void *ptr, size_t size)
     	//return newptr;
 	//if next block is free and sum is greater than new then just extend current block
 
-*/
+/*
 
 //else{
 
@@ -449,7 +460,7 @@ void *mm_realloc(void *ptr, size_t size)
     return newptr;
 	
 //	}
-
+*/
 }
 
 
