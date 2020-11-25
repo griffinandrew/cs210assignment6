@@ -1,13 +1,9 @@
 /*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- * 
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
- *
- * NOTE TO STUDENTS: Replace this header comment with your own header
- * comment that gives a high level description of your solution.
+This approach maximizes the utliity and throughput of a implicit list memory allocation structure. A block has a payload as well as a header and footer to designate size and allocation status
+A block is allocated by first traversing the list using the best fit technique then changing the allocation status of the header and footer tags. 
+If a fit is found the heap is extended to the appropraite size and the allocation tags are adjusted.
+This implementation utlizes a coalesce function that is used to ensure that no free blocks are adjacent to eachother minimizing the wasted space.
+In realloc blocks can be resized and reused according to the requested size and what category that size request follows into. This way a new block is not created each time but rather reused, only calling a new block if completely necessary
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -222,7 +218,6 @@ for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is fir
         }
     }
     return NULL; //not fit 
-
 }
 /*
 void *bp;
@@ -332,9 +327,8 @@ void *mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
     void *newptr;
-    size_t copySize;
 	size_t old_size; //size is payload and header and footer
-	size_t asize, next_size, csize;
+	size_t aligned_size, next_size;
     
 
 	if(ptr == NULL){
@@ -349,7 +343,7 @@ void *mm_realloc(void *ptr, size_t size)
 	old_size = GET_SIZE(HDRP(oldptr)); //get size of block and surroundings to be used for the cases of realloc
 	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr))); //gets size of the next block
 
-	size_t aligned_size = ALIGN(size+DSIZE);
+	aligned_size = ALIGN(size+DSIZE);
 
 	if(aligned_size == old_size){ //if the aligned size of the request is equal to the old size same block is used just return
 		return ptr;
