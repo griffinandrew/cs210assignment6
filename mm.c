@@ -205,9 +205,9 @@ void *mm_malloc(size_t size)
 		return NULL; 
 	place (bp, asize);
 	
-//	if (mm_check() != 0){ //check 
-//		printf("ERROR\n");
-//	}
+	if (mm_check() != 0){ //check 
+		printf("ERROR\n");
+	}
 
 
 	return bp;
@@ -233,7 +233,7 @@ int counter;
 void *next_in_heap = heap_listp +count;
 for (bp = next_in_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is next
 	counter++;
-        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
+        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){ //this implementation of next is incomplete I could not figure out how to do it witho
 			next_in_heap = heap_listp + counter;
             return bp;
         }
@@ -251,7 +251,7 @@ void *worst = NULL;
 	for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is worst fit 
 		if(!GET_ALLOC(HDRP(bp)) && (GET_SIZE(HDRP(bp))) >= asize){
 			if(worst == NULL){
-				worst = bp;
+				worst = bp; 
 				//if(asize == GET_SIZE(HDRP(best))){
 				//	return best;
 				//}
@@ -492,15 +492,15 @@ void show_block(void *bp){
 //this function is used by check to check different aspects of the heap such as 2 uncoalesced blocks next to eachother and if they are out of bounds
 //it returns a appropraite error message and -1 if an error has occurred here
 int heap_check(void *bp){
-	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(NEXT_BLKP(HDRP(bp))) == 0){ //ensure that current block and next is not free
-		printf("Error uncoalesced blocks current and next %p, %p \n", bp, NEXT_BLKP((HDRP(bp))));
+	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(HDRP(NEXT_BLKP(bp))) == 0){ //ensure that current block and next is not free
+		printf("Error uncoalesced blocks current and next %p, %p \n", HDRP(bp), HDRP((NEXT_BLKP(bp))));
 		return -1;
 	}
-	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(PREV_BLKP(HDRP(bp))) == 0){ //ensure that no current block and prev is not free
-		printf("Error uncoalesced blocks current and prev %p, %p \n", bp, PREV_BLKP((HDRP(bp))));
+	if(GET_ALLOC(HDRP(bp)) == 0 && GET_ALLOC(HDRP(PREV_BLKP(bp))) == 0){ //ensure that no current block and prev is not free
+		printf("Error uncoalesced blocks current and prev %p, %p \n", HDRP(bp), HDRP((PREV_BLKP(bp))));
 		return -1;
 	}
-	if(HDRP(bp) > (char*)mem_heap_hi || FTRP(bp) < (char*)mem_heap_lo){ //make sure that blocks are in the heap
+	if(HDRP(bp) > (char*)mem_heap_hi() || FTRP(bp) < (char*)mem_heap_lo()){ //make sure that blocks are in the heap
 		printf("Error pointer is out of bounds %p, %p\n", HDRP(bp), FTRP(bp));
 		printf("should be in range %p, %p\n",mem_heap_hi, mem_heap_lo);
 		return -1;
