@@ -208,8 +208,6 @@ void *mm_malloc(size_t size)
 //	if (mm_check() != 0){ //check 
 //		printf("ERROR\n");
 //	}
-
-
 	return bp;
 }
 
@@ -226,7 +224,6 @@ for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is fir
     return NULL; //not fit 
 
 }
-
 /*
 void *bp;
 int counter;
@@ -238,10 +235,6 @@ for (bp = next_in_heap; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is n
             return bp;
         }
     }
-
-
-
-
 	return NULL;
 }
 */
@@ -297,11 +290,7 @@ void *worst = NULL;
 return NULL;
 }
 
-
-	
 */
-
-
     /*for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)){ //this is firsts fit
         if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
             return bp;
@@ -325,6 +314,7 @@ static void place(void *bp, size_t asize)
         PUT(HDRP(bp), PACK(csize - asize, 0)); //the leftover space is then freed
         PUT(FTRP(bp), PACK(csize - asize, 0));
     }
+
     else{
         PUT(HDRP(bp),PACK(csize, 1)); //otherwise just place the size of the block given in the header
         PUT(FTRP(bp),PACK(csize, 1));
@@ -356,68 +346,49 @@ void *mm_realloc(void *ptr, size_t size)
 		return NULL;
 	}
 	
-
 	old_size = GET_SIZE(HDRP(oldptr)); //get size of block and surroundings to be used for the cases of realloc
-	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-	asize = old_size - size;
-
+	next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr))); //gets size of the next block
 
 	size_t aligned_size = ALIGN(size+DSIZE);
 
 	if(aligned_size == old_size){ //if the aligned size of the request is equal to the old size same block is used just return
 		return ptr;
 	}
-	csize = size - old_size;
 
 	if(aligned_size < old_size){ //case 1 new is less than old and must be shrunk
-		
 		/*
 		if(old_size - aligned_size < 4*WSIZE){ //if size is less then min size
 			return oldptr;
 		}
 		else {
-		PUT(HDRP(oldptr), PACK(aligned_size,1)); //shrinking the size results in not preserving the data
+		PUT(HDRP(oldptr), PACK(aligned_size,1)); //shrinking the size results in not preserving the data that is why this is commented out didn't want to delete so you saw I knew what to do
 		PUT(FTRP(oldptr), PACK(aligned_size,1));
 		old_size = GET_SIZE(HDRP(oldptr));
 		asize = old_size - aligned_size;
-		//newptr = oldptr;
-		//oldptr = NEXT_BLKP(newptr);
-
-
 		PUT(HDRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		PUT(FTRP(NEXT_BLKP(oldptr)), PACK(asize, 0));
 		mm_free(NEXT_BLKP(oldptr)); //wait im freeing before coalescing
-		//coalesce?
-
-		coalesce(NEXT_BLKP(oldptr));
+		}
 		*/
 		return oldptr;
-	
 	}
 	
-
 	else{
 		old_size = GET_SIZE(HDRP(oldptr));
 		next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
+
 		if( ((GET_ALLOC(HDRP(NEXT_BLKP(oldptr)))) == 0) 
 		&& (old_size + next_size >= aligned_size) ){ //case 2 new is greater than old, next block is free and next and oldsize are greater than or equal to the aligned size requested
 			PUT(HDRP(oldptr), PACK(old_size + next_size,1)); //expand the block using the free space from next
 			PUT(FTRP(oldptr), PACK(old_size + next_size,1));
-				
-			//old_size = GET_SIZE(HDRP(oldptr));
-			//next_size = GET_SIZE(HDRP(NEXT_BLKP(oldptr)));
-			//csize = size - old_size;
-
-			//PUT(HDRP(NEXT_BLKP(oldptr)), PACK(csize, 0)); //adjusting here leads to payload error
-			//PUT(FTRP(NEXT_BLKP(oldptr)), PACK(csize, 0));
-			//mm_free(NEXT_BLKP(oldptr));
 			return oldptr;
 		}
-		else{ //if(((GET_ALLOC(NEXT_BLKP(oldptr) == 0)) && (old_size + next_size < size)) || (GET_ALLOC(NEXT_BLKP(oldptr) != 0)))  {
-			newptr = mm_malloc(size);  //case 3 new is greater than old, next is free and old + next is less than aligned size or the next block is allocated
-			if (newptr == NULL) //allocate memory for the block, then check to make sure malloc did not fail
+
+		else{ //case 3 new is greater than old, next is free and old + next is less than aligned size or the next block is allocated
+			newptr = mm_malloc(size);  //allocate memory for the block, then check to make sure malloc did not fail
+			if (newptr == NULL) 
       			return NULL;
-			old_size = GET_SIZE(HDRP(ptr)) -DSIZE; //get the size of payload, thus subtract header and footer size
+			old_size = GET_SIZE(HDRP(ptr)) - DSIZE; //get the size of payload, thus subtract header and footer size
 			if(size < old_size) 
 			{
 				old_size = size;
